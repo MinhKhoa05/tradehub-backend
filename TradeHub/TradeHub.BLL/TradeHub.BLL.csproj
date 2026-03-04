@@ -10,4 +10,9 @@
     <ProjectReference Include="..\TradeHub.DAL\TradeHub.DAL.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Core" Version="1.6.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.24" />
+  </ItemGroup>
+
 </Project>

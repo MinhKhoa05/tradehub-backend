@@ -4,73 +4,107 @@ using MySqlConnector;
 
 namespace TradeHub.DAL
 {
-    public class DatabaseContext : IDisposable
+    public class DatabaseContext : IAsyncDisposable
     {
-        private readonly IDbConnection _connection;
-        private IDbTransaction? _transaction;
+        private readonly MySqlConnection _connection;
+        private MySqlTransaction? _transaction;
 
         public DatabaseContext(string connectionString)
         {
             DefaultTypeMap.MatchNamesWithUnderscores = true;
-
             _connection = new MySqlConnection(connectionString);
-            _connection.Open();
         }
+
+        #region Connection
+
+        public async Task OpenAsync()
+        {
+            if (_connection.State != ConnectionState.Open)
+                await _connection.OpenAsync();
+        }
+
+        #endregion
 
         #region Transaction
 
-        public void BeginTransaction()
-            => _transaction ??= _connection.BeginTransaction();
-
-        public void Commit()
+        public async Task BeginTransactionAsync()
         {
-            _transaction?.Commit();
-            _transaction = null;
+            await OpenAsync();
+            _transaction ??= await _connection.BeginTransactionAsync();
         }
 
-        public void Rollback()
+        public async Task CommitAsync()
         {
-            _transaction?.Rollback();
-            _transaction = null;
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
 
-        public void ExecuteInTransaction(Action action)
+        public async Task RollbackAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public async Task ExecuteInTransactionAsync(Func<Task> action)
         {
             try
             {
-                BeginTransaction();
-                action();
-                Commit();
+                await BeginTransactionAsync();
+                await action();
+                await CommitAsync();
             }
             catch
             {
-                Rollback();
+                await RollbackAsync();
                 throw;
             }
         }
 
         #endregion
 
-        #region Dapper Helpers
+        #region Dapper Async Helpers
 
-        public int Execute(string sql, object? param = null)
-            => _connection.Execute(sql, param, _transaction);
+        public async Task<int> ExecuteAsync(string sql, object? param = null)
+        {
+            await OpenAsync();
+            return await _connection.ExecuteAsync(sql, param, _transaction);
+        }
 
-        public T ExecuteScalar<T>(string sql, object? param = null)
-            => _connection.ExecuteScalar<T>(sql, param, _transaction);
+        public async Task<T> ExecuteScalarAsync<T>(string sql, object? param = null)
+        {
+            await OpenAsync();
+            return await _connection.ExecuteScalarAsync<T>(sql, param, _transaction);
+        }
 
-        public T? QuerySingle<T>(string sql, object? param = null)
-            => _connection.QuerySingleOrDefault<T>(sql, param, _transaction);
+        public async Task<T?> QuerySingleAsync<T>(string sql, object? param = null)
+        {
+            await OpenAsync();
+            return await _connection.QuerySingleOrDefaultAsync<T>(sql, param, _transaction);
+        }
 
-        public List<T> QueryList<T>(string sql, object? param = null)
-            => _connection.Query<T>(sql, param, _transaction).AsList();
+        public async Task<List<T>> QueryListAsync<T>(string sql, object? param = null)
+        {
+            await OpenAsync();
+            var result = await _connection.QueryAsync<T>(sql, param, _transaction);
+            return result.AsList();
+        }
 
         #endregion
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _transaction?.Dispose();
-            _connection.Dispose();
+            if (_transaction != null)
+                await _transaction.DisposeAsync();
+
+            await _connection.DisposeAsync();
         }
     }
 }
