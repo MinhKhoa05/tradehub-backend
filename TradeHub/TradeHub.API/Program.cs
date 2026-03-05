@@ -93,9 +93,12 @@ builder.Services.AddScoped<DatabaseContext>(sp =>
 
 // Repositories
 builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<ProductRepository>();
 
 // Services
+builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ProductService>();
 
 // Token Service
 builder.Services.AddScoped<TokenService>();

@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using TradeHub.BLL.Configurations;
-using TradeHub.BLL.DTOs;
 using Microsoft.Extensions.Options;
+using TradeHub.BLL.DTOs.Auths;
 
 namespace TradeHub.BLL.Services
 {

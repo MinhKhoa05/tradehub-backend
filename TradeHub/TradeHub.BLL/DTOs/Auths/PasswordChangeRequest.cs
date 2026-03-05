@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace TradeHub.BLL.DTOs
+namespace TradeHub.BLL.DTOs.Auths
 {
     public class PasswordChangeRequest
     {

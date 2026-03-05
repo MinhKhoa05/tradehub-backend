@@ -1,4 +1,4 @@
-﻿namespace TradeHub.BLL.DTOs
+﻿namespace TradeHub.BLL.DTOs.Users
 {
     public class UserResponse
     {

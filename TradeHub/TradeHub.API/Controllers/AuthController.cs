@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TradeHub.BLL.Services;
-using TradeHub.BLL.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using TradeHub.BLL.Services;
+using TradeHub.BLL.Mappings;
+using TradeHub.BLL.DTOs.Auths;
+using TradeHub.BLL.DTOs.Users;
 
 namespace TradeHub.API.Controllers
 {
@@ -17,33 +19,34 @@ namespace TradeHub.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] UserRegisterRequest registerRequest)
+        public async Task<IActionResult> Register(CreateUserRequest registerRequest)
         {
-            await _authService.Register(registerRequest);
+            await _authService.RegisterAsync(registerRequest);
             return Ok();
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest)
+        public async Task<IActionResult> Login(LoginRequest loginRequest)
         {
-            string token = await _authService.Login(loginRequest);
+            string token = await _authService.LoginAsync(loginRequest);
             return Ok( new { accessToken = token });
         }
 
+        [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetMe()
         {
             int userId = HttpContext.GetUserId();
             var user = await _authService.GetMe(userId);
-            return Ok(user);
+            return Ok(user?.ToResponse());
         }
         
         [Authorize]
         [HttpPut("change-password")]
-        public async Task<IActionResult> ChangePassword([FromBody] PasswordChangeRequest passwordChangeRequest)
+        public async Task<IActionResult> ChangePassword(PasswordChangeRequest passwordChangeRequest)
         {
             int userId = HttpContext.GetUserId();
-            await _authService.ChangePassword(userId, passwordChangeRequest);
+            await _authService.ChangePasswordAsync(userId, passwordChangeRequest);
             return Ok();
         }
     }
