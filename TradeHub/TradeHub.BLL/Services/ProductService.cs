@@ -2,6 +2,7 @@
 using TradeHub.DAL.Entities;
 using TradeHub.BLL.DTOs.Products;
 using TradeHub.BLL.Exceptions;
+using TradeHub.BLL.Utils;
 
 namespace TradeHub.BLL.Services
 {
@@ -40,6 +41,7 @@ namespace TradeHub.BLL.Services
             var product = new Product
             {
                 Name = request.Name,
+                NomalizedName = NormalizeName.Normalize(request.Name),
                 Description = request.Description,
                 Price = request.Price,
                 Stock = 0,
@@ -52,7 +54,7 @@ namespace TradeHub.BLL.Services
 
         public async Task<Product> UpdateProductAsync(int userId, int productId, UpdateProductRequest request)
         {
-            if (request.Name == null && request.Description == null)
+            if (string.IsNullOrEmpty(request.Name) && request.Description == null)
             {
                 throw new BusinessException("Không có dữ liệu để cập nhật");
             }
@@ -63,7 +65,12 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Không có quyền để cập nhật");
             }
 
-            product.Name = request.Name ?? product.Name;
+            if (request.Name != null)
+            {
+                product.Name = request.Name;
+                product.NomalizedName = NormalizeName.Normalize(request.Name);
+            }
+
             product.Description = request.Description ?? product.Description;
 
             await _productRepository.UpdateAsync(productId, product);
@@ -110,6 +117,18 @@ namespace TradeHub.BLL.Services
             {
                 throw new BusinessException("Tồn kho không đủ hoặc không có quyền cập nhật");
             }
+        }
+
+        public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)
+        {
+            string normalizedName = NormalizeName.Normalize(productName);
+
+            if (string.IsNullOrEmpty(normalizedName))
+            {
+                return new List<Product>();
+            }
+
+            return await _productRepository.SearchByNameAsync(normalizedName, page, 20);
         }
     }
 }

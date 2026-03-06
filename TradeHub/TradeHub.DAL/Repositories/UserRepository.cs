@@ -52,7 +52,7 @@ namespace TradeHub.DAL.Repositories
             return await _dbContext.ExecuteAsync(sql, new { Amount = amount, UserId = userId });
         }
 
-        public async Task<int> UpdateProfileAsync(User user)
+        public async Task<int> UpdateAsync(User user)
         {
             string sql = @"UPDATE users SET name = @Name, email = @Email
                     WHERE id = @Id";
