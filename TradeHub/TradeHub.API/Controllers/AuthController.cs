@@ -1,9 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using TradeHub.BLL.Services;
 using TradeHub.BLL.Mappings;
 using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.DTOs.Users;
+using TradeHub.BLL.ApplicationServices;
+using TradeHub.API.Extensions;
 
 namespace TradeHub.API.Controllers
 {
@@ -37,7 +38,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> GetMe()
         {
             int userId = HttpContext.GetUserId();
-            var user = await _authService.GetMe(userId);
+            var user = await _authService.GetCurrentUserAsync(userId);
             return Ok(user?.ToResponse());
         }
         

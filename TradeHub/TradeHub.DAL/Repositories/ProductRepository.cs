@@ -14,8 +14,8 @@ namespace TradeHub.DAL.Repositories
 
         public async Task<int> CreateAsync(Product product)
         {
-            var sql = @"INSERT INTO products (name, name_nomalize, description, price, stock, seller_id)
-                    VALUES (@Name, @NameNomalize, @Decription, @Price, @Stock, @SellerId);
+            var sql = @"INSERT INTO products (name, normalized_name, description, price, stock, seller_id)
+                    VALUES (@Name, @NormalizedName, @Decription, @Price, @Stock, @SellerId);
                     SELECT LAST_INSERT_ID();";
             return await _databaseContext.ExecuteScalarAsync<int>(sql);
         }
@@ -24,6 +24,15 @@ namespace TradeHub.DAL.Repositories
         {
             var sql = "SELECT * FROM products WHERE id = @Id";
             return await _databaseContext.QuerySingleAsync<Product>(sql, new { Id = id });
+        }
+
+        public async Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids)
+        {
+            if (ids == null || !ids.Any())
+                return new List<Product>();
+            
+            var sql = "SELECT * FROM products WHERE id IN @Ids";
+            return await _databaseContext.QueryListAsync<Product>(sql, new { Ids = ids });
         }
 
         public async Task<List<Product>> GetAllAsync()
@@ -43,35 +52,35 @@ namespace TradeHub.DAL.Repositories
             var sql = @"
                 UPDATE Products
                 SET name = @Name,
-                    name_nomalize = @NameNomalize,
-                    description = @Description,
+                    normalized_name = @NormalizedName,
+                    description = @Description
                 WHERE id = @Id";
 
             return await _databaseContext.ExecuteAsync(sql, new
             {
                 Id = productId,
                 product.Name,
-                product.NameNormalize,
+                product.NormalizedName,
                 product.Description,
             });
         }
 
-        public async Task<int> UpdatePriceBySellerAsync(int productId, double price, int sellerId)
+        public async Task<int> UpdatePriceAsync(int productId, int price)
         {
-            var sql = "UPDATE products SET price = @Price WHERE id = @Id AND seller_id = @SellerId";
-            return await _databaseContext.ExecuteAsync(sql, new { Price = price, Id = productId, SellerId = sellerId });
+            var sql = "UPDATE products SET price = @Price WHERE id = @Id";
+            return await _databaseContext.ExecuteAsync(sql, new { Price = price, Id = productId });
         }
 
-        public async Task<int> IncreaseStockBySellerAsync(int productId, int quantity, int sellerId)
+        public async Task<int> IncreaseStockAsync(int productId, int quantity)
         {
-            var sql = "UPDATE products SET stock = stock + @Quantity WHERE id = @Id AND seller_id = @SellerId";
-            return await _databaseContext.ExecuteAsync(sql, new {  Quantity = quantity, Id = productId, SellerId = sellerId });
+            var sql = "UPDATE products SET stock = stock + @Quantity WHERE id = @Id";
+            return await _databaseContext.ExecuteAsync(sql, new {  Quantity = quantity, Id = productId });
         }
 
-        public async Task<int> DecreaseStockBySellerAsync(int productId, int quantity, int sellerId)
+        public async Task<int> DecreaseStockAsync(int productId, int quantity)
         {
-            var sql = "UPDATE products SET stock = stock - @Quantity WHERE id = @Id AND stock >= @Quantity AND seller_id = @SellerId";
-            return await _databaseContext.ExecuteAsync(sql, new { Quantity = quantity,Id = productId, SellerId = sellerId });
+            var sql = "UPDATE products SET stock = stock - @Quantity WHERE id = @Id AND stock >= @Quantity";
+            return await _databaseContext.ExecuteAsync(sql, new { Quantity = quantity,Id = productId });
         }
 
         public async Task<List<Product>> SearchByNameAsync(string normalizedName, int page, int pageSize)
@@ -79,7 +88,7 @@ namespace TradeHub.DAL.Repositories
             var sql = """
                 SELECT *
                 FROM Products
-                WHERE nomalized_name LIKE '%@NormalizedName%'
+                WHERE normalized_name LIKE '%@NormalizedName%'
                 ORDER BY Id
                 OFFSET @Offset ROWS
                 FETCH NEXT @PageSize ROWS ONLY

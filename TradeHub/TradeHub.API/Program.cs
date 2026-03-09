@@ -1,7 +1,6 @@
-﻿using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+﻿using TradeHub.API.Extensions;
 using TradeHub.API.Middlewares;
+using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.Configurations;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
@@ -9,7 +8,7 @@ using TradeHub.DAL.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -17,7 +16,6 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "TradeHub API", Version = "v1" });
 
-    // Thêm cấu hình JWT
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -45,45 +43,17 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
-
-
+// Bind JwtSettings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
 
 
-// ================= JWT CONFIG =================
+// JWT Authentication
+builder.Services.AddJwtAuthentication(builder.Configuration);
 
-var jwtSettings = builder.Configuration
-    .GetSection("Jwt")
-    .Get<JwtSettings>();
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
+// ================= DATABASE =================
 
-        ValidIssuer = jwtSettings!.Issuer,
-        ValidAudience = jwtSettings.Audience,
-
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings.Key)),
-
-        ClockSkew = TimeSpan.Zero
-    };
-});
-
-// =================================================
-
-// Add DatabaseContext
 builder.Services.AddScoped<DatabaseContext>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
@@ -91,20 +61,36 @@ builder.Services.AddScoped<DatabaseContext>(sp =>
     return new DatabaseContext(connectionString!);
 });
 
-// Repositories
+
+// ================= REPOSITORIES =================
+
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<CartItemRepository>();
 
-// Services
+
+// ================= SERVICES =================
+
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<CartService>();
 
-// Token Service
+
+// ================= APPLICATION SERVICES =================
+
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<CartViewUsecase>();
+
+
+// ================= TOKEN SERVICE =================
+
 builder.Services.AddScoped<TokenService>();
 
 
 var app = builder.Build();
+
+
+// ================= MIDDLEWARE =================
 
 if (app.Environment.IsDevelopment())
 {
@@ -115,7 +101,6 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
-
 
 app.UseAuthentication();
 app.UseAuthorization();

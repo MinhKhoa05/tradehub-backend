@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TradeHub.API.Extensions;
 using TradeHub.BLL.DTOs.Products;
 using TradeHub.BLL.Services;
 
@@ -59,7 +60,7 @@ namespace TradeHub.API.Controllers
 
         [Authorize]
         [HttpPut("{id}/price")]
-        public async Task<IActionResult> UpdatePrice(int id, [FromBody] double newPrice)
+        public async Task<IActionResult> UpdatePrice(int id, [FromBody] int newPrice)
         {
             var userId = HttpContext.GetUserId();
             await (_productService.UpdatePriceBySellerAsync(id, newPrice, userId));

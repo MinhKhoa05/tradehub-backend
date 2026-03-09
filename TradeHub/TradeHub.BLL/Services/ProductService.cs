@@ -31,6 +31,11 @@ namespace TradeHub.BLL.Services
             return product;
         }
 
+        public async Task<List<Product>> GetProductsByIdsAsync(IEnumerable<int> ids)
+        {
+            return await _productRepository.GetByIdsAsync(ids);
+        }
+
         public async Task<List<Product>> GetProductsBySellerAsync(int sellerId)
         {
             return await _productRepository.GetBySellerAsync(sellerId);
@@ -41,7 +46,7 @@ namespace TradeHub.BLL.Services
             var product = new Product
             {
                 Name = request.Name,
-                NomalizedName = NormalizeName.Normalize(request.Name),
+                NormalizedName = NormalizeName.Normalize(request.Name),
                 Description = request.Description,
                 Price = request.Price,
                 Stock = 0,
@@ -68,7 +73,7 @@ namespace TradeHub.BLL.Services
             if (request.Name != null)
             {
                 product.Name = request.Name;
-                product.NomalizedName = NormalizeName.Normalize(request.Name);
+                product.NormalizedName = NormalizeName.Normalize(request.Name);
             }
 
             product.Description = request.Description ?? product.Description;
@@ -77,14 +82,20 @@ namespace TradeHub.BLL.Services
             return product;
         }
 
-        public async Task UpdatePriceBySellerAsync(int productId, double newPrice, int userId)
+        public async Task UpdatePriceBySellerAsync(int productId, int newPrice, int userId)
         {
             if (newPrice < 0)
             {
                 throw new BusinessException("Giá của sản phẩm không được âm");
             }
 
-            var affected = await _productRepository.UpdatePriceBySellerAsync(productId, newPrice, userId);
+            var product = await GetProductByIdOrThrowAsync(productId);
+            if (product.SellerId != userId)
+            {
+                throw new BusinessException("Không có quyền để cập nhật");
+            }
+
+            var affected = await _productRepository.UpdatePriceAsync(productId, newPrice);
             if (affected == 0)
             {
                 throw new NotFoundException("sản phẩm", "id", productId);
@@ -98,10 +109,16 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Số lượng phải lớn hơn 0");
             }
 
-            var affected = await _productRepository.IncreaseStockBySellerAsync(productId, quantity, userId);
+            var product = await GetProductByIdOrThrowAsync(productId);
+            if (product.SellerId != userId)
+            {
+                throw new BusinessException("Không có quyền để cập nhật");
+            }
+
+            var affected = await _productRepository.IncreaseStockAsync(productId, quantity);
             if (affected == 0)
             {
-                throw new BusinessException("Sản phẩm không tồn tại hoặc không có quyền cập nhật");
+                throw new BusinessException("Sản phẩm không tồn tại");
             }
         }
 
@@ -112,23 +129,29 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Số lượng phải lớn hơn 0");
             }
 
-            var affected = await _productRepository.DecreaseStockBySellerAsync(productId, quantity, userId);
+            var product = await GetProductByIdOrThrowAsync(productId);
+            if (product.SellerId != userId)
+            {
+                throw new BusinessException("Không có quyền để cập nhật");
+            }
+
+            var affected = await _productRepository.DecreaseStockAsync(productId, quantity);
             if (affected == 0)
             {
-                throw new BusinessException("Tồn kho không đủ hoặc không có quyền cập nhật");
+                throw new BusinessException("Tồn kho không đủ");
             }
         }
 
-        public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)
-        {
-            string normalizedName = NormalizeName.Normalize(productName);
+        //public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)
+        //{
+        //    string normalizedName = NormalizeName.Normalize(productName);
 
-            if (string.IsNullOrEmpty(normalizedName))
-            {
-                return new List<Product>();
-            }
+        //    if (string.IsNullOrEmpty(normalizedName))
+        //    {
+        //        return new List<Product>();
+        //    }
 
-            return await _productRepository.SearchByNameAsync(normalizedName, page, 20);
-        }
+        //    return await _productRepository.SearchByNameAsync(normalizedName, page, 20);
+        //}
     }
 }

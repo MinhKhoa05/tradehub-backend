@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace TradeHub.API
+namespace TradeHub.API.Extensions
 {
     public static class HttpContextExtensions
     {

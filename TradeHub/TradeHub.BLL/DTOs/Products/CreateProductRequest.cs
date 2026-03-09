@@ -11,7 +11,7 @@ namespace TradeHub.BLL.DTOs.Products
         public string? Description { get; set; }
 
         [Required(ErrorMessage = "Giá sản phẩm không được để trống")]
-        [Range(0, double.MaxValue, ErrorMessage = "Giá sản phẩm không được âm")]
-        public double Price { get; set; }
+        [Range(0, int.MaxValue, ErrorMessage = "Giá sản phẩm không được âm")]
+        public int Price { get; set; }
     }
 }

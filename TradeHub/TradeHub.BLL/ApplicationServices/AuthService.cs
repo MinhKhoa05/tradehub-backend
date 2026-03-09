@@ -1,10 +1,10 @@
-﻿using TradeHub.BLL.DTOs;
-using TradeHub.BLL.DTOs.Auths;
+﻿using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
 using TradeHub.BLL.DTOs.Users;
+using TradeHub.BLL.Services;
 
-namespace TradeHub.BLL.Services
+namespace TradeHub.BLL.ApplicationServices
 {
     public class AuthService
     {
@@ -20,10 +20,7 @@ namespace TradeHub.BLL.Services
         public async Task RegisterAsync(CreateUserRequest request)
         {
             // Kiểm tra mật khẩu và hash
-            if (!IsStrongPassword(request.Password))
-            {
-                throw new BusinessException("Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số");
-            }
+            ValidatePassword(request.Password);
             
             request.Password = HashPassword(request.Password);
 
@@ -35,14 +32,14 @@ namespace TradeHub.BLL.Services
             var user = await _userService.GetByEmailAsync(loginRequest.Email);
             if (user == null)
             {
-                throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+                throw new BusinessException("Email hoặc mật khẩu không đúng");
             }
             
             // Kiểm tra mật khẩu có đúng không
             bool verify = VerifyPassword(loginRequest.Password, user.PasswordHash);
             if (!verify)
             {
-                throw new UnauthorizedAccessException("Email hoặc mật khẩu không đúng");
+                throw new BusinessException("Email hoặc mật khẩu không đúng");
             }
 
             // Tạo JWT AccessToken
@@ -73,17 +70,14 @@ namespace TradeHub.BLL.Services
             }
 
             // Kiểm tra mật khẩu và hash
-            if (!IsStrongPassword(passwordChangeRequest.NewPassword))
-            {
-                throw new BusinessException("Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 chữ thường, 1 số");
-            }
+            ValidatePassword(passwordChangeRequest.NewPassword);
 
             string passwordHash = HashPassword(passwordChangeRequest.NewPassword);
 
             await _userService.UpdatePasswordAsync(userId, passwordHash);
         }
 
-        public async Task<User?> GetMe(int userId)
+        public async Task<User?> GetCurrentUserAsync(int userId)
         {
             return await _userService.GetUserByIdOrThrowAsync(userId);
         }
@@ -96,6 +90,14 @@ namespace TradeHub.BLL.Services
         private static bool VerifyPassword(string password, string passwordHash)
         {
             return BCrypt.Net.BCrypt.Verify(password, passwordHash);
+        }
+
+        private static void ValidatePassword(string password)
+        {
+            if (!IsStrongPassword(password))
+            {
+                throw new BusinessException("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt");
+            }
         }
 
         private static bool IsStrongPassword(string password)

@@ -2,8 +2,8 @@
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using TradeHub.BLL.Configurations;
 using Microsoft.Extensions.Options;
+using TradeHub.BLL.Configurations;
 using TradeHub.BLL.DTOs.Auths;
 
 namespace TradeHub.BLL.Services
@@ -12,6 +12,7 @@ namespace TradeHub.BLL.Services
     {
         private readonly JwtSettings _jwtSettings;
         private readonly SymmetricSecurityKey _securityKey;
+        private readonly JwtSecurityTokenHandler _tokenHandler = new();
 
         public TokenService(IOptions<JwtSettings> jwtOptions)
         {
@@ -24,12 +25,16 @@ namespace TradeHub.BLL.Services
         public string GenerateAccessToken(TokenRequest tokenRequest)
         {
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, tokenRequest.UserId.ToString()),
-                new Claim(ClaimTypes.Name, tokenRequest.Name),
-                new Claim(JwtRegisteredClaimNames.Email, tokenRequest.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-            };
+        {
+            new Claim(ClaimTypes.NameIdentifier, tokenRequest.UserId.ToString()),
+            new Claim(ClaimTypes.Name, tokenRequest.Name),
+            new Claim(JwtRegisteredClaimNames.Email, tokenRequest.Email),
+
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                ClaimValueTypes.Integer64)
+        };
 
             var credentials = new SigningCredentials(
                 _securityKey,
@@ -43,7 +48,7 @@ namespace TradeHub.BLL.Services
                 signingCredentials: credentials
             );
 
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return _tokenHandler.WriteToken(token);
         }
     }
 }

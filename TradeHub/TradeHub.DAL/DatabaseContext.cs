@@ -53,13 +53,22 @@ namespace TradeHub.DAL
             }
         }
 
-        public async Task ExecuteInTransactionAsync(Func<Task> action)
+        public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
         {
+            if (_transaction != null)
+            {
+                return await action();
+            }
+
             try
             {
                 await BeginTransactionAsync();
-                await action();
+
+                var result = await action();
+
                 await CommitAsync();
+
+                return result;
             }
             catch
             {
