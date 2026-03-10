@@ -56,7 +56,7 @@ namespace TradeHub.BLL.Services
             }
         }
 
-        public async Task DeleteCartItemAsync(int userId, int productId)
+        public async Task RemoveCartItemAsync(int userId, int productId)
         {
             int affected = await _cartItemRepository.DeleteAsync(userId, productId);
             if (affected == 0)
@@ -65,7 +65,7 @@ namespace TradeHub.BLL.Services
             }
         }
 
-        public async Task DeleteCartAsync(int userId)
+        public async Task ClearCartAsync(int userId)
         {
             int affected = await _cartItemRepository.DeleteByUserIdAsync(userId);
             if (affected == 0)

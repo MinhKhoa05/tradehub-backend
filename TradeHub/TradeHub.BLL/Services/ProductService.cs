@@ -142,6 +142,20 @@ namespace TradeHub.BLL.Services
             }
         }
 
+        public async Task DecreaseStockForOrderAsync(int productId, int quantity)
+        {
+            if (quantity <= 0)
+            {
+                throw new BusinessException("Số lượng phải lớn hơn 0");
+            }
+
+            var affected = await _productRepository.DecreaseStockAsync(productId, quantity);
+            if (affected == 0)
+            {
+                throw new BusinessException("Tồn kho không đủ");
+            }
+        }
+
         //public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)
         //{
         //    string normalizedName = NormalizeName.Normalize(productName);

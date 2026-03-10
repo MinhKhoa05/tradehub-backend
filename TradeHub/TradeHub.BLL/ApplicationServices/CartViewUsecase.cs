@@ -1,5 +1,6 @@
 ﻿using TradeHub.BLL.Services;
 using TradeHub.BLL.DTOs.Carts;
+using TradeHub.BLL.Mappings;
 
 namespace TradeHub.BLL.ApplicationServices
 {
@@ -17,36 +18,24 @@ namespace TradeHub.BLL.ApplicationServices
         public async Task<List<CartItemDTO>> GetCartViewByUserIdAsync(int userId)
         {
             var cartItems = await _cartService.GetCartByUserIdAsync(userId);
-
+            
             if (!cartItems.Any())
                 return new List<CartItemDTO>();
 
             var productIds = cartItems
                 .Select(x => x.ProductId)
-                .Distinct();
+                .Distinct()
+                .ToList();
 
             var products = await _productService.GetProductsByIdsAsync(productIds);
 
             var productDic = products.ToDictionary(p => p.Id);
 
-            return cartItems.Select(cartItem =>
-            {
-                productDic.TryGetValue(cartItem.ProductId, out var product);
-
-                return new CartItemDTO
-                {
-                    Id = cartItem.Id,
-                    ProductId = cartItem.ProductId,
-                    Quantity = cartItem.Quantity,
-
-                    Product = product == null ? null : new CartProductDTO
-                    {
-                        ProductId = product.Id,
-                        Name = product.Name,
-                        Price = product.Price
-                    }
-                };
-            }).ToList();
+            return cartItems
+                .Select(cartItem =>
+                    cartItem.ToCartItemDTO(
+                        productDic.GetValueOrDefault(cartItem.ProductId)))
+                .ToList();
         }
     }
 }

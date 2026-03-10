@@ -77,6 +77,15 @@ namespace TradeHub.DAL
             }
         }
 
+        public async Task ExecuteInTransactionAsync(Func<Task> action)
+        {
+            await ExecuteInTransactionAsync(async () =>
+            {
+                await action();
+                return true;
+            });
+        }
+
         #endregion
 
         #region Dapper Async Helpers
@@ -85,6 +94,12 @@ namespace TradeHub.DAL
         {
             await OpenAsync();
             return await _connection.ExecuteAsync(sql, param, _transaction);
+        }
+
+        public async Task<int> ExecuteInsertAsync(string sql, object? param = null)
+        {
+            await OpenAsync();
+            return await _connection.ExecuteScalarAsync<int>(sql + "; SELECT LAST_INSERT_ID();", param, _transaction);
         }
 
         public async Task<T> ExecuteScalarAsync<T>(string sql, object? param = null)

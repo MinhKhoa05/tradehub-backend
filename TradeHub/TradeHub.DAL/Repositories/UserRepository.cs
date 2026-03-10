@@ -27,11 +27,9 @@ namespace TradeHub.DAL.Repositories
         {
             string sql = @"
                 INSERT INTO users (name, email, password_hash, balance)
-                VALUES (@Name, @Email, @PasswordHash, @Balance);
-                SELECT LAST_INSERT_ID();";
+                VALUES (@Name, @Email, @PasswordHash, @Balance)";
 
-            var id = await _dbContext.ExecuteScalarAsync<int>(sql, user);
-            return id;
+            return await _dbContext.ExecuteInsertAsync(sql, user);
         }
 
         public async Task<int> UpdatePasswordAsync(int userId, string newPasswordHash)

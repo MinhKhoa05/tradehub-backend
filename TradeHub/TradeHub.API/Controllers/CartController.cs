@@ -62,11 +62,11 @@ namespace TradeHub.API.Controllers
 
         [Authorize]
         [HttpDelete("{productId}")]
-        public async Task<IActionResult> DeleteCartItem(int productId)
+        public async Task<IActionResult> RemoveCartItem(int productId)
         {
             var userId = HttpContext.GetUserId();
 
-            await _cartService.DeleteCartItemAsync(userId, productId);
+            await _cartService.RemoveCartItemAsync(userId, productId);
             return Ok();
         }
     }

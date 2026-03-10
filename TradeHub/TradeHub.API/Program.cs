@@ -68,18 +68,23 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<CartItemRepository>();
 
+builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<OrderItemRepository>();
+builder.Services.AddScoped<OrderHistoryRepository>();
 
 // ================= SERVICES =================
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CartService>();
+builder.Services.AddScoped<OrderService>();
 
 
 // ================= APPLICATION SERVICES =================
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CartViewUsecase>();
+builder.Services.AddScoped<OrderApplicationService>();
 
 
 // ================= TOKEN SERVICE =================

@@ -14,9 +14,8 @@ namespace TradeHub.DAL.Repositories
         public async Task<int> CreateAsync(CartItem cartItem)
         {
             var sql = @"INSERT INTO cart_items (user_id, product_id, quantity)
-                        VALUES (@UserId, @ProductId, @Quantity);
-                        SELECT LAST_INSERT_ID();";
-            return await _databaseContext.ExecuteScalarAsync<int>(sql);
+                        VALUES (@UserId, @ProductId, @Quantity)";
+            return await _databaseContext.ExecuteInsertAsync(sql, cartItem);
         }
 
         public async Task<int> UpdateQuantityAsync(int userId, int productId, int quantity)

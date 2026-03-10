@@ -15,9 +15,8 @@ namespace TradeHub.DAL.Repositories
         public async Task<int> CreateAsync(Product product)
         {
             var sql = @"INSERT INTO products (name, normalized_name, description, price, stock, seller_id)
-                    VALUES (@Name, @NormalizedName, @Decription, @Price, @Stock, @SellerId);
-                    SELECT LAST_INSERT_ID();";
-            return await _databaseContext.ExecuteScalarAsync<int>(sql);
+                    VALUES (@Name, @NormalizedName, @Description, @Price, @Stock, @SellerId)";
+            return await _databaseContext.ExecuteInsertAsync(sql, product);
         }
 
         public async Task<Product?> GetByIdAsync(int id)
