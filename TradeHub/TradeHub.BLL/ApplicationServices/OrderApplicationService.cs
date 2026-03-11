@@ -1,5 +1,6 @@
 ﻿using TradeHub.BLL.DTOs.Carts;
 using TradeHub.BLL.DTOs.Orders;
+using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
@@ -74,7 +75,7 @@ namespace TradeHub.BLL.ApplicationServices
             var cartItems = await _cartService.GetCartByUserIdAsync(userId);
 
             if (cartItems.Count == 0)
-                throw new InvalidOperationException("Cart is empty");
+                throw new BusinessException("Cart is empty");
 
             return cartItems;
         }
@@ -93,7 +94,7 @@ namespace TradeHub.BLL.ApplicationServices
 
                 // Kiểm tra tầng 1
                 if (product.Stock < cart.Quantity)
-                    throw new InvalidOperationException($"Product {product.Id} out of stock");
+                    throw new BusinessException($"Product {product.Id} out of stock");
                 
                 // Cập nhật số lượng (kiểm tra tầng 2), service sẽ tự quăng lỗi nếu có
                 await _productService.DecreaseStockForOrderAsync(product.Id, cart.Quantity);

@@ -14,7 +14,7 @@ namespace TradeHub.BLL.Services
             _userRepository = userRepository;
         }
         
-        public async Task CreateUserAsync(CreateUserRequest request)
+        public async Task<int> CreateUserAsync(CreateUserRequest request)
         {
             // Kiểm tra email đã được đăng ký chưa?
             var existingUser = await _userRepository.GetByEmailAsync(request.Email);
@@ -31,7 +31,7 @@ namespace TradeHub.BLL.Services
                 PasswordHash = request.Password,
             };
 
-            await _userRepository.CreateAsync(user);
+            return await _userRepository.CreateAsync(user);
         }
 
         public async Task<User?> GetByEmailAsync(string email)
