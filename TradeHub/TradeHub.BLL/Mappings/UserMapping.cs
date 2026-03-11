@@ -12,7 +12,6 @@ namespace TradeHub.BLL.Mappings
                 Id = user.Id,
                 Name = user.Name,
                 Email = user.Email,
-                Balance = user.Balance
             };
         }
     }

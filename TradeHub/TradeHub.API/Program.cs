@@ -72,12 +72,17 @@ builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderItemRepository>();
 builder.Services.AddScoped<OrderHistoryRepository>();
 
+builder.Services.AddScoped<WalletRepository>();
+builder.Services.AddScoped<WalletTransactionRepository>();
+
+
 // ================= SERVICES =================
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<WalletService>();
 
 
 // ================= APPLICATION SERVICES =================

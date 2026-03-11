@@ -17,9 +17,5 @@ namespace TradeHub.DAL.Entities
         
         [Required]
         public string PasswordHash { get; set; }
-
-        [Range(0, int.MaxValue)]
-        public int Balance { get; set; }
-
     }
 }

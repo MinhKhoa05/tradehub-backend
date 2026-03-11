@@ -29,7 +29,6 @@ namespace TradeHub.BLL.Services
                 Name = request.Name,
                 Email = request.Email,
                 PasswordHash = request.Password,
-                Balance = 0
             };
 
             await _userRepository.CreateAsync(user);

@@ -94,7 +94,7 @@ namespace TradeHub.BLL.Services
 
         public async Task UpdateStatusAsync(int userId, int orderId, UpdateOrderStatusRequest request)
         {
-            var order = await _orderRepository.GetByIdAsync(userId);
+            var order = await _orderRepository.GetByIdAsync(orderId);
             if (order == null)
             {
                 throw new BusinessException("Đơn hàng không tồn tại");

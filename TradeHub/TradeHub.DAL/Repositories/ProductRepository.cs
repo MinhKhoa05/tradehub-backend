@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using TradeHub.DAL.Entities;
+﻿using TradeHub.DAL.Entities;
 
 namespace TradeHub.DAL.Repositories
 {

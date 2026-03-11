@@ -38,18 +38,6 @@ namespace TradeHub.DAL.Repositories
             return await _dbContext.ExecuteAsync(sql, new { PasswordHash = newPasswordHash, UserId = userId });
         }
 
-        public async Task<int> DepositBalanceAsync(int userId, int amount)
-        {
-            string sql = @"UPDATE users SET balance = balance + @Amount WHERE id = @UserId";
-            return await _dbContext.ExecuteAsync(sql, new { Amount = amount, UserId = userId });
-        }
-
-        public async Task<int> WithdrawBalanceAsync(int userId, int amount)
-        {
-            string sql = @"UPDATE users SET balance = balance - @Amount WHERE id = @UserId AND balance >= @Amount";
-            return await _dbContext.ExecuteAsync(sql, new { Amount = amount, UserId = userId });
-        }
-
         public async Task<int> UpdateAsync(User user)
         {
             string sql = @"UPDATE users SET name = @Name, email = @Email
