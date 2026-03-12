@@ -1,55 +1,47 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TradeHub.BLL.Services;
-using TradeHub.API.Extensions;
 
 namespace TradeHub.API.Controllers
 {
+    [Authorize]
     [Route("api/wallet")]
     [ApiController]
-    public class WalletController : ControllerBase
+    public class WalletController : BaseController
     {
-        private readonly WalletService _walletService;
+        private readonly WalletService _wallet;
 
-        public WalletController(WalletService walletService)
+        public WalletController(WalletService wallet)
         {
-            _walletService = walletService;
+            _wallet = wallet;
         }
 
-        [Authorize]
         [HttpGet]
-        public async Task<IActionResult> GetMyWallet()
+        public async Task<IActionResult> GetWallet()
         {
-            var userId = HttpContext.GetUserId();
-            var wallet = await _walletService.GetWalletByUserIdOrThrowAsync(userId);
-            return Ok(wallet);
+            var wallet = await _wallet.GetWalletByUserIdOrThrowAsync(CurrentUserId);
+            return ApiOk(wallet);
         }
 
-        [Authorize]
         [HttpGet("transactions")]
         public async Task<IActionResult> GetWalletTransaction()
         {
-            var userId = HttpContext.GetUserId();
-            var transactions = await _walletService.GetWalletTransactionsAsync(userId);
-            return Ok(transactions);
+            var transactions = await _wallet.GetWalletTransactionsAsync(CurrentUserId);
+            return ApiOk(transactions);
         }
 
-        [Authorize]
-        [HttpPost("deposit")]
+        [HttpPost("transactions/deposit")]
         public async Task<IActionResult> Deposit([FromBody] int amount)
         {
-            var userId = HttpContext.GetUserId();
-            var transaction = await _walletService.DepositAsync(userId, amount);
-            return Ok(transaction);
+            var transaction = await _wallet.DepositAsync(CurrentUserId, amount);
+            return ApiOk(transaction);
         }
 
-        [Authorize]
-        [HttpPost("withdraw")]
+        [HttpPost("transactions/withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] int amount)
         {
-            var userId = HttpContext.GetUserId();
-            var transaction = await _walletService.WithdrawAsync(userId, amount);
-            return Ok(transaction);
+            var transaction = await _wallet.WithdrawAsync(CurrentUserId, amount);
+            return ApiOk(transaction);
         }
     }
 }

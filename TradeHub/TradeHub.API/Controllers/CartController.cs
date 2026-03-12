@@ -1,73 +1,58 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using TradeHub.API.Extensions;
 using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.DTOs.Carts;
 using TradeHub.BLL.Services;
 
 namespace TradeHub.API.Controllers
 {
+    [Authorize]
     [Route("api/cart")]
     [ApiController]
-    public class CartController : ControllerBase
+    public class CartController : BaseController
     {
-        private readonly CartService _cartService;
-        private readonly CartViewUsecase _cartViewUsecase;
+        private readonly CartService _cart;
+        private readonly CartViewUsecase _cartView;
 
-        public CartController(CartService cartService, CartViewUsecase cartViewUsecase)
+        public CartController(CartService cart, CartViewUsecase cartView)
         {
-            _cartService = cartService;
-            _cartViewUsecase = cartViewUsecase;
+            _cart = cart;
+            _cartView = cartView;
         }
 
-        [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> GetMyCart()
+        [HttpGet("items")]
+        public async Task<IActionResult> GetCartItems()
         {
-            var userId = HttpContext.GetUserId();
-
-            var cartProducts = await _cartViewUsecase.GetCartViewByUserIdAsync(userId);
-            return Ok(cartProducts);
+            var items = await _cartView.GetCartViewByUserIdAsync(CurrentUserId);
+            return ApiOk(items);
         }
 
-        [Authorize]
-        [HttpGet("count")]
-        public async Task<IActionResult> GetCartItemCount()
+        [HttpGet("items/summary")]
+        public async Task<IActionResult> GetSummaryAsync()
         {
-            var userId = HttpContext.GetUserId();
-            var count = await _cartService.GetCartItemCountAsync(userId);
-            return Ok(count);
+            var count  = await _cart.GetTotalQuantityAsync(CurrentUserId);
+            return ApiOk(count);
         }
 
-        [Authorize]
-        [HttpPost]
-        public async Task<IActionResult> AddToCart(CartItemRequest request)
+        [HttpPost("items")]
+        public async Task<IActionResult> AddItem(CartItemRequest request)
         {
-            var userId = HttpContext.GetUserId();
-
-            var cartItem = await _cartService.AddToCartAsync(userId, request);
-            return Ok(cartItem);
+            var cartItem = await _cart.AddItemAsync(CurrentUserId, request);
+            return ApiCreated(cartItem);
         }
 
-        [Authorize]
-        [HttpPut]
-        public async Task<IActionResult> UpdateQuantity(CartItemRequest request)
+        [HttpPut("items/{productId}")]
+        public async Task<IActionResult> UpdateQuantity(int productId, [FromBody] int quantity)
         {
-            var userId = HttpContext.GetUserId();
-
-            await _cartService.UpdateQuantityAsync(userId, request);
-            return Ok();
+            await _cart.UpdateQuantityAsync(CurrentUserId, productId, quantity);
+            return ApiNoContent();
         }
 
-        [Authorize]
-        [HttpDelete("{productId}")]
+        [HttpDelete("items/{productId}")]
         public async Task<IActionResult> RemoveCartItem(int productId)
         {
-            var userId = HttpContext.GetUserId();
-
-            await _cartService.RemoveCartItemAsync(userId, productId);
-            return Ok();
+            await _cart.RemoveItemAsync(CurrentUserId, productId);
+            return ApiNoContent();
         }
     }
 }

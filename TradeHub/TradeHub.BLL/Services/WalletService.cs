@@ -8,22 +8,22 @@ namespace TradeHub.BLL.Services
 {
     public class WalletService
     {
-        private readonly WalletRepository _walletRepository;
-        private readonly WalletTransactionRepository _walletTransactionRepository;
-        private readonly DatabaseContext _databaseContext;
-
-        public WalletService(WalletRepository walletRepository, WalletTransactionRepository walletTransactionRepository, DatabaseContext databaseContext)
+        private readonly WalletRepository _walletRepo;
+        private readonly WalletTransactionRepository _walletTxRepo;
+        private readonly DatabaseContext _database;
+        
+        public WalletService(WalletRepository walletRepo, WalletTransactionRepository walletTxRepo, DatabaseContext database)
         {
-            _walletRepository = walletRepository;
-            _walletTransactionRepository = walletTransactionRepository;
-            _databaseContext = databaseContext;
+            _walletRepo = walletRepo;
+            _walletTxRepo = walletTxRepo;
+            _database = database;
         }
-
+        
         public async Task<List<WalletTransaction>> GetWalletTransactionsAsync(int userId)
         {
             var wallet = await GetWalletByUserIdOrThrowAsync(userId);
 
-            return await _walletTransactionRepository.GetByWalletIdAsync(wallet.Id);
+            return await _walletTxRepo.GetByWalletIdAsync(wallet.Id);
         }
 
         public async Task<int> GetWalletBalanceAsync(int userId)
@@ -40,7 +40,7 @@ namespace TradeHub.BLL.Services
                 Balance = 0,
             };
 
-            wallet.Id = await _walletRepository.CreateAsync(wallet);
+            wallet.Id = await _walletRepo.CreateAsync(wallet);
             return wallet;
         }
 
@@ -96,17 +96,17 @@ namespace TradeHub.BLL.Services
                 ReferenceId = info.ReferenceId,
             };
 
-            await _databaseContext.ExecuteInTransactionAsync(async () =>
+            await _database.ExecuteInTransactionAsync(async () =>
             {
                 if (info.IsDecreaseBalance)
                 {
                     await DecreaseBalanceOrThrowAsync(userId, amount);
                 } else
                 {
-                    await _walletRepository.IncreaseBalanceAsync(userId, amount);
+                    await _walletRepo.IncreaseBalanceAsync(userId, amount);
                 }
 
-                walletTransaction.Id = await _walletTransactionRepository.CreateAsync(walletTransaction);
+                walletTransaction.Id = await _walletTxRepo.CreateAsync(walletTransaction);
             });
 
             return walletTransaction;
@@ -114,17 +114,14 @@ namespace TradeHub.BLL.Services
 
         public async Task<Wallet> GetWalletByUserIdOrThrowAsync(int userId)
         {
-            var wallet = await _walletRepository.GetByUserIdAsync(userId);
-            if (wallet == null)
-            {
-                throw new BusinessException($"Người dùng không có ví");
-            }
+            var wallet = await _walletRepo.GetByUserIdAsync(userId)
+                            ?? throw new BusinessException($"Người dùng không có ví");
             return wallet;
         }
 
         private async Task DecreaseBalanceOrThrowAsync(int userId, int amount)
         {
-            var affected = await _walletRepository.DecreaseBalanceAsync(userId, amount);
+            var affected = await _walletRepo.DecreaseBalanceAsync(userId, amount);
 
             if (affected == 0)
                 throw new BusinessException("Số dư không đủ để thực hiện");

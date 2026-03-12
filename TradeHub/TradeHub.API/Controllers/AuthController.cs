@@ -4,51 +4,48 @@ using TradeHub.BLL.Mappings;
 using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.ApplicationServices;
-using TradeHub.API.Extensions;
 
 namespace TradeHub.API.Controllers
 {
     [Route("api/auth")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseController
     {
-        private readonly AuthService _authService;
-
-        public AuthController(AuthService authService)
+        private readonly AuthService _auth;
+        
+        public AuthController(AuthService auth)
         {
-            _authService = authService;
+            _auth = auth;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(CreateUserRequest registerRequest)
         {
-            await _authService.RegisterAsync(registerRequest);
-            return Ok();
+            await _auth.RegisterAsync(registerRequest);
+            return ApiCreated();
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest loginRequest)
         {
-            string token = await _authService.LoginAsync(loginRequest);
-            return Ok( new { accessToken = token });
+            string token = await _auth.LoginAsync(loginRequest);
+            return ApiOk( new { accessToken = token });
         }
 
         [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetMe()
         {
-            int userId = HttpContext.GetUserId();
-            var user = await _authService.GetCurrentUserAsync(userId);
-            return Ok(user?.ToResponse());
+            var user = await _auth.GetCurrentUserAsync(CurrentUserId);
+            return ApiOk(user.ToResponse());
         }
         
         [Authorize]
-        [HttpPut("change-password")]
+        [HttpPut("password")]
         public async Task<IActionResult> ChangePassword(PasswordChangeRequest passwordChangeRequest)
         {
-            int userId = HttpContext.GetUserId();
-            await _authService.ChangePasswordAsync(userId, passwordChangeRequest);
-            return Ok();
+            await _auth.ChangePasswordAsync(CurrentUserId, passwordChangeRequest);
+            return ApiNoContent();
         }
     }
 }

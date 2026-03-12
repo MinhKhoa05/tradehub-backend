@@ -102,7 +102,7 @@ namespace TradeHub.DAL
             return await _connection.ExecuteScalarAsync<int>(sql + "; SELECT LAST_INSERT_ID();", param, _transaction);
         }
 
-        public async Task<T> ExecuteScalarAsync<T>(string sql, object? param = null)
+        public async Task<T?> ExecuteScalarAsync<T>(string sql, object? param = null)
         {
             await OpenAsync();
             return await _connection.ExecuteScalarAsync<T>(sql, param, _transaction);

@@ -4,24 +4,24 @@ namespace TradeHub.DAL.Repositories
 {
     public class OrderItemRepository
     {
-        private readonly DatabaseContext _databaseContext;
+        private readonly DatabaseContext _database;
 
-        public OrderItemRepository(DatabaseContext databaseContext)
+        public OrderItemRepository(DatabaseContext database)
         {
-            _databaseContext = databaseContext;
+            _database = database;
         }
 
         public async Task<List<OrderItem>> GetByOrderIdAsync(int orderId)
         {
             var sql = "SELECT * FROM order_items WHERE order_id = @OrderId";
-            return await _databaseContext.QueryListAsync<OrderItem>(sql, new { OrderId = orderId });
+            return await _database.QueryListAsync<OrderItem>(sql, new { OrderId = orderId });
         }
 
         public async Task<int> CreateRangeAsync(IEnumerable<OrderItem> items)
         {
             var sql = @"INSERT INTO order_items (order_id, product_id, unit_price, quantity)
                         VALUES (@OrderId, @ProductId, @UnitPrice, @Quantity)"; 
-            return await _databaseContext.ExecuteAsync(sql, items);
+            return await _database.ExecuteAsync(sql, items);
         }
     }
 }

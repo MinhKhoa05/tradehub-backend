@@ -9,47 +9,46 @@ namespace TradeHub.BLL.ApplicationServices
 {
     public class AuthService
     {
-        private readonly UserService _userService;
-        private readonly TokenService _tokenService;
-        private readonly WalletService _walletService;
-        private readonly DatabaseContext _databaseContext;
+        private readonly UserService _user;
+        private readonly WalletService _wallet;
+        
+        private readonly TokenService _token;
+        private readonly PasswordService _password;
 
-        public AuthService(UserService userService, TokenService tokenService, WalletService walletService, DatabaseContext databaseContext)
+        private readonly DatabaseContext _database;
+        
+        public AuthService(UserService user, WalletService wallet, TokenService token, PasswordService password, DatabaseContext database)
         {
-            _userService = userService;
-            _tokenService = tokenService;
-            _walletService = walletService;
-            _databaseContext = databaseContext;
+            _user = user;
+            _wallet = wallet;
+            _token = token;
+            _password = password;
+            _database = database;
         }
 
         public async Task RegisterAsync(CreateUserRequest request)
         {
             // Kiểm tra mật khẩu và hash
-            ValidatePassword(request.Password);
-            
-            request.Password = HashPassword(request.Password);
+            _password.Validate(request.Password);
 
-            await _databaseContext.ExecuteInTransactionAsync(async () =>
+            request.Password = _password.Hash(request.Password);
+
+            await _database.ExecuteInTransactionAsync(async () =>
             {
-                
-                var userId = await _userService.CreateUserAsync(request);
+                var userId = await _user.CreateUserAsync(request);
 
                 // tạo ví cho user
-                await _walletService.CreateWalletAsync(userId);
+                await _wallet.CreateWalletAsync(userId);
             });
         }
 
-        public async Task<string> LoginAsync(LoginRequest loginRequest)
+        public async Task<string> LoginAsync(LoginRequest request)
         {
-            var user = await _userService.GetByEmailAsync(loginRequest.Email);
-            if (user == null)
-            {
-                throw new BusinessException("Email hoặc mật khẩu không đúng");
-            }
+            var user = await _user.GetByEmailAsync(request.Email)
+                        ?? throw new BusinessException("Email hoặc mật khấu không đúng");
             
             // Kiểm tra mật khẩu có đúng không
-            bool verify = VerifyPassword(loginRequest.Password, user.PasswordHash);
-            if (!verify)
+            if (!_password.Verify(request.Password, user.PasswordHash))
             {
                 throw new BusinessException("Email hoặc mật khẩu không đúng");
             }
@@ -62,69 +61,35 @@ namespace TradeHub.BLL.ApplicationServices
                 Name = user.Name
             };
 
-            return _tokenService.GenerateAccessToken(tokenRequest);
+            return _token.GenerateAccessToken(tokenRequest);
         }
 
-        public async Task ChangePasswordAsync(int userId, PasswordChangeRequest passwordChangeRequest)
+        public async Task ChangePasswordAsync(int userId, PasswordChangeRequest request)
         {
-            if (passwordChangeRequest.CurrentPassword == passwordChangeRequest.NewPassword)
+            if (request.CurrentPassword == request.NewPassword)
             {
                 throw new BusinessException("Mật khẩu mới không được trùng mật khẩu hiện tại");
             }
 
-            var user = await _userService.GetUserByIdOrThrowAsync(userId);
+            // Kiểm tra mật khẩu mạnh
+            _password.Validate(request.NewPassword);
+
+            var user = await _user.GetUserByIdOrThrowAsync(userId);
 
             // VerfyPassword
-            bool verify = VerifyPassword(passwordChangeRequest.CurrentPassword, user.PasswordHash);
-            if (!verify)
+            if (!_password.Verify(request.CurrentPassword, user.PasswordHash))
             {
                 throw new BusinessException("Mật khẩu hiện tại không đúng");
             }
 
-            // Kiểm tra mật khẩu và hash
-            ValidatePassword(passwordChangeRequest.NewPassword);
+            string passwordHash = _password.Hash(request.NewPassword);
 
-            string passwordHash = HashPassword(passwordChangeRequest.NewPassword);
-
-            await _userService.UpdatePasswordAsync(userId, passwordHash);
+            await _user.UpdatePasswordAsync(userId, passwordHash);
         }
 
-        public async Task<User?> GetCurrentUserAsync(int userId)
+        public async Task<User> GetCurrentUserAsync(int userId)
         {
-            return await _userService.GetUserByIdOrThrowAsync(userId);
-        }
-
-        private static string HashPassword(string password)
-        {
-            return BCrypt.Net.BCrypt.HashPassword(password);
-        }
-
-        private static bool VerifyPassword(string password, string passwordHash)
-        {
-            return BCrypt.Net.BCrypt.Verify(password, passwordHash);
-        }
-
-        private static void ValidatePassword(string password)
-        {
-            if (!IsStrongPassword(password))
-            {
-                throw new BusinessException("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt");
-            }
-        }
-
-        private static bool IsStrongPassword(string password)
-        {
-            if (password.Length < 8)
-                return false;
-            if (!password.Any(char.IsUpper))
-                return false;
-            if (!password.Any(char.IsLower))
-                return false;
-            if (!password.Any(char.IsDigit))
-                return false;
-            if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
-                return false;
-            return true;
+            return await _user.GetUserByIdOrThrowAsync(userId);
         }
     }
 }

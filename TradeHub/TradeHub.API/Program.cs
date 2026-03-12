@@ -89,13 +89,13 @@ builder.Services.AddScoped<WalletService>();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CartViewUsecase>();
-builder.Services.AddScoped<OrderApplicationService>();
+builder.Services.AddScoped<OrderUsecase>();
 
 
-// ================= TOKEN SERVICE =================
+// ================= OTHER SERVICES =================
 
 builder.Services.AddScoped<TokenService>();
-
+builder.Services.AddScoped<PasswordService>();
 
 var app = builder.Build();
 

@@ -8,36 +8,33 @@ namespace TradeHub.BLL.Services
 {
     public class OrderService
     {
-        private readonly OrderRepository _orderRepository;
-        private readonly OrderItemRepository _orderItemRepository;
-        private readonly OrderHistoryRepository _orderHistoryRepository;
-        private readonly DatabaseContext _databaseContext;
-
-        public OrderService(
-            OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository,
-            OrderHistoryRepository orderHistoryRepository,
-            DatabaseContext databaseContext)
-        {
-            _orderRepository = orderRepository;
-            _orderItemRepository = orderItemRepository;
-            _orderHistoryRepository = orderHistoryRepository;
-            _databaseContext = databaseContext;
+        private readonly OrderRepository _orderRepo;
+        private readonly OrderItemRepository _orderItemRepo;
+        private readonly OrderHistoryRepository _orderHistoryRepo;
+        private readonly DatabaseContext _database;
+        
+        public OrderService(OrderRepository orderRepo, OrderItemRepository orderItemRepo,
+            OrderHistoryRepository orderHistoryRepo, DatabaseContext database)
+        { 
+            _orderRepo = orderRepo;
+            _orderItemRepo = orderItemRepo;
+            _orderHistoryRepo = orderHistoryRepo;
+            _database = database;
         }
-
+        
         public async Task<List<int>> CreateOrdersAsync(int userId, CheckoutRequest request)
         {
             if (request.Items == null || request.Items.Count == 0)
-            {
                 throw new BusinessException("Đơn hàng phải có ít nhất 1 sản phẩm");
-            }
+
+            var groups = request.Items.GroupBy(x => x.SellerId);
 
             var orderIds = new List<int>();
             
             // Nhóm sản phẩm theo seller
-            foreach (var group in request.Items.GroupBy(x => x.SellerId))
+            foreach (var group in groups)
             {
-                var orderId = await CreateSingleOrderAsync(userId, group.Key, request.PaymentMethod, group.ToList());
+                var orderId = await CreateOrderForSellerAsync(userId, group.Key, request.PaymentMethod, group.ToList());
 
                 orderIds.Add(orderId);
             }
@@ -45,7 +42,7 @@ namespace TradeHub.BLL.Services
             return orderIds;
         }
 
-        private async Task<int> CreateSingleOrderAsync(int userId, int sellerId, PaymentMethod paymentMethod, List<CheckoutItem> items)
+        private async Task<int> CreateOrderForSellerAsync(int userId, int sellerId, PaymentMethod paymentMethod, List<CheckoutItem> items)
         {
             var order = new Order
             {
@@ -56,7 +53,7 @@ namespace TradeHub.BLL.Services
                 TotalAmount = CalculateOrderTotal(items)
             };
 
-            var orderId = await _orderRepository.CreateAsync(order);
+            var orderId = await _orderRepo.CreateAsync(order);
 
             await CreateOrderItemsAsync(orderId, items);
 
@@ -73,9 +70,9 @@ namespace TradeHub.BLL.Services
                 ProductId = x.ProductId,
                 Quantity = x.Quantity,
                 UnitPrice = x.UnitPrice
-            });
+            }).ToList();
 
-            await _orderItemRepository.CreateRangeAsync(orderItems);
+            await _orderItemRepo.CreateRangeAsync(orderItems);
         }
 
         private async Task CreateOrderHistoryAsync(int userId, int orderId)
@@ -89,30 +86,27 @@ namespace TradeHub.BLL.Services
                 Note = "Đặt hàng thành công, đang chờ người bán xác nhận"
             };
 
-            await _orderHistoryRepository.CreateAsync(history);
+            await _orderHistoryRepo.CreateAsync(history);
         }
 
         public async Task UpdateStatusAsync(int userId, int orderId, UpdateOrderStatusRequest request)
         {
-            var order = await _orderRepository.GetByIdAsync(orderId);
-            if (order == null)
-            {
-                throw new BusinessException("Đơn hàng không tồn tại");
-            }
+            var order = await _orderRepo.GetByIdAsync(orderId)
+                            ?? throw new BusinessException("Đơn hàng không tồn tại");
 
             var currentStatus = order.Status;
 
             if (!IsValidStatusTransition(currentStatus, request.ToStatus))
                 throw new BusinessException($"Chuyển đổi status không khả dụng: {currentStatus} -> {request.ToStatus}");
 
-            await _databaseContext.ExecuteInTransactionAsync(async () =>
+            await _database.ExecuteInTransactionAsync(async () =>
             {
-                var affectedRows = await _orderRepository.UpdateStatusAsync(orderId, request.ToStatus);
+                var affectedRows = await _orderRepo.UpdateStatusAsync(orderId, request.ToStatus);
 
                 if (affectedRows == 0)
                     throw new BusinessException("Đơn hàng không tồn tại");
 
-                await _orderHistoryRepository.CreateAsync(new OrderHistory
+                await _orderHistoryRepo.CreateAsync(new OrderHistory
                 {
                     OrderId = orderId,
                     FromStatus = currentStatus,

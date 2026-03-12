@@ -6,36 +6,30 @@ namespace TradeHub.BLL.ApplicationServices
 {
     public class CartViewUsecase
     {
-        private readonly CartService _cartService;
-        private readonly ProductService _productService;
+        private readonly CartService _cart;
+        private readonly ProductService _product;
 
-        public CartViewUsecase(CartService cartService, ProductService productService)
+        public CartViewUsecase(CartService cart, ProductService product)
         {
-            _cartService = cartService;
-            _productService = productService;
+            _cart = cart;
+            _product = product;
         }
 
-        public async Task<List<CartItemDTO>> GetCartViewByUserIdAsync(int userId)
+        public async Task<IEnumerable<CartItemDTO>> GetCartViewByUserIdAsync(int userId)
         {
-            var cartItems = await _cartService.GetCartByUserIdAsync(userId);
+            var cartItems = await _cart.GetCartItemsByUserIdAsync(userId);
             
-            if (!cartItems.Any())
-                return new List<CartItemDTO>();
+            var productIds = cartItems.Select(x => x.ProductId).ToList();
 
-            var productIds = cartItems
-                .Select(x => x.ProductId)
-                .Distinct()
-                .ToList();
+            var products = await _product.GetProductsByIdsAsync(productIds);
 
-            var products = await _productService.GetProductsByIdsAsync(productIds);
+            var productDict = products.ToDictionary(p => p.Id);
 
-            var productDic = products.ToDictionary(p => p.Id);
-
-            return cartItems
-                .Select(cartItem =>
-                    cartItem.ToCartItemDTO(
-                        productDic.GetValueOrDefault(cartItem.ProductId)))
-                .ToList();
+            return cartItems.Select(cartItem =>
+                cartItem.ToCartItemDTO(
+                    productDict.GetValueOrDefault(cartItem.ProductId)
+                )
+            );
         }
     }
 }

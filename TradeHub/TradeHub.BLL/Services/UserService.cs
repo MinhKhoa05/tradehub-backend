@@ -7,21 +7,19 @@ namespace TradeHub.BLL.Services
 {
     public class UserService
     {
-        private readonly UserRepository _userRepository;
+        private readonly UserRepository _userRepo;
         
-        public UserService(UserRepository userRepository)
+        public UserService(UserRepository userRepo)
         {
-            _userRepository = userRepository;
+            _userRepo = userRepo;
         }
         
         public async Task<int> CreateUserAsync(CreateUserRequest request)
         {
             // Kiểm tra email đã được đăng ký chưa?
-            var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+            var existingUser = await _userRepo.GetByEmailAsync(request.Email);
             if (existingUser != null)
-            {
                 throw new BusinessException("Email đã được sử dụng");
-            }
 
             // Thêm user mới
             var user = new User
@@ -31,27 +29,23 @@ namespace TradeHub.BLL.Services
                 PasswordHash = request.Password,
             };
 
-            return await _userRepository.CreateAsync(user);
+            return await _userRepo.CreateAsync(user);
         }
 
         public async Task<User?> GetByEmailAsync(string email)
         {
-            return await _userRepository.GetByEmailAsync(email);
+            return await _userRepo.GetByEmailAsync(email);
         }
 
         public async Task UpdatePasswordAsync(int userId, string newPasswordHash)
         {
-            await _userRepository.UpdatePasswordAsync(userId, newPasswordHash);
+            await _userRepo.UpdatePasswordAsync(userId, newPasswordHash);
         }
 
         public async Task<User> GetUserByIdOrThrowAsync(int userId)
         {
-            var user = await _userRepository.GetByIdAsync(userId);
-            if (user == null)
-            {
-                throw new NotFoundException("User", "id", userId);
-            }
-
+            var user = await _userRepo.GetByIdAsync(userId)
+                            ?? throw new BusinessException("Người dùng không tồn tại");
             return user;
         }
     }

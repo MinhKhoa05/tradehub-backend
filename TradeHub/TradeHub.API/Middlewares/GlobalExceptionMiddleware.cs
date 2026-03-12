@@ -46,9 +46,14 @@ namespace TradeHub.API.Middlewares
                     ? "Đã xảy ra lỗi không mong muốn."
                     : ex.Message;
 
-            var response = new {message};
+            var response = ApiResponse.Fail(message);
 
-            return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            var options = new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+
+            return context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
         }
     }
 }

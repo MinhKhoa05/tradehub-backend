@@ -1,89 +1,78 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TradeHub.API.Extensions;
 using TradeHub.BLL.DTOs.Products;
 using TradeHub.BLL.Services;
 
 namespace TradeHub.API.Controllers
 {
+    [Authorize]
     [Route("api/products")]
     [ApiController]
-    public class ProductController : ControllerBase
+    public class ProductController : BaseController
     {
-        private readonly ProductService _productService;
+        private readonly ProductService _product;
 
-        public ProductController(ProductService productService)
+        public ProductController(ProductService product)
         {
-            _productService = productService;
+            _product = product;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> GetProducts()
         {
-            var products = await _productService.GetProductsAsync();
-            return Ok(products);
+            var products = await _product.GetProductsAsync();
+            return ApiOk(products);
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProductById(int id)
         {
-            var product = await _productService.GetProductByIdOrThrowAsync(id);
-            return Ok(product);
+            var product = await _product.GetProductByIdOrThrowAsync(id);
+            return ApiOk(product);
         }
 
-        [Authorize]
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProducts()
         {
-            var userId = HttpContext.GetUserId();
-            var products = await _productService.GetProductsBySellerAsync(userId);
-            return Ok(products);
+            var products = await _product.GetProductsBySellerAsync(CurrentUserId);
+            return ApiOk(products);
         }
 
-        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateProduct(CreateProductRequest request)
         {
-            var userId = HttpContext.GetUserId();
-            var product = await _productService.CreateProductAsync(userId, request);
-            return Ok(product);
+            var product = await _product.CreateProductAsync(CurrentUserId, request);
+            return ApiCreated(product);
         }
 
-        [Authorize]
         [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, UpdateProductRequest request)
         {
-            var userId = HttpContext.GetUserId();
-            var product = await _productService.UpdateProductAsync(userId, id, request);
-            return Ok(product);
+            var product = await _product.UpdateProductAsync(CurrentUserId, id, request);
+            return ApiOk(product);
         }
 
-        [Authorize]
         [HttpPut("{id}/price")]
         public async Task<IActionResult> UpdatePrice(int id, [FromBody] int newPrice)
         {
-            var userId = HttpContext.GetUserId();
-            await (_productService.UpdatePriceBySellerAsync(id, newPrice, userId));
-            return Ok();
+            await _product.UpdatePriceBySellerAsync(id, newPrice, CurrentUserId);
+            return ApiNoContent();
         }
 
-        [Authorize]
         [HttpPut("{id}/stock/increase")]
         public async Task<IActionResult> IncreaseStock(int id, [FromBody] int quantity)
         {
-            var userId = HttpContext.GetUserId();
-            await (_productService.IncreaseStockBySellerAsync(id, quantity, userId));
-            return Ok();
+            await _product.IncreaseStockBySellerAsync(id, quantity, CurrentUserId);
+            return ApiNoContent();
         }
 
-        [Authorize]
-        [HttpPut("{id}/stock/descrease")]
+        [HttpPut("{id}/stock/decrease")]
         public async Task<IActionResult> DecreaseStock(int id, [FromBody] int quantity)
         {
-            var userId = HttpContext.GetUserId();
-            await (_productService.DecreaseStockBySellerAsync(id, quantity, userId));
-            return Ok();
+            await _product.DecreaseStockBySellerAsync(id, quantity, CurrentUserId);
+            return ApiNoContent();
         }
-
     }
 }

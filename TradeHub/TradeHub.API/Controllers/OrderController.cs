@@ -1,29 +1,27 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TradeHub.API.Extensions;
 using TradeHub.BLL.ApplicationServices;
 using TradeHub.DAL.Entities;
 
 namespace TradeHub.API.Controllers
 {
+    [Authorize]
     [Route("api/orders")]
     [ApiController]
-    public class OrderController : ControllerBase
+    public class OrderController : BaseController
     {
-        private readonly OrderApplicationService _orderApplicationService;
+        private readonly OrderUsecase _orderUsecase;
 
-        public OrderController(OrderApplicationService orderApplicationService)
+        public OrderController(OrderUsecase orderUsecase)
         {
-            _orderApplicationService = orderApplicationService;
+            _orderUsecase = orderUsecase;
         }
 
-        [Authorize]
         [HttpPost]
         public async Task<IActionResult> PlaceOrder()
         {
-            var userId = HttpContext.GetUserId();
-            var orderIds = await _orderApplicationService.PlaceOrderAsync(userId, PaymentMethod.Cod);
-            return Ok(orderIds);
+            var orderIds = await _orderUsecase.PlaceOrderAsync(CurrentUserId, PaymentMethod.Cod);
+            return ApiOk(orderIds);
         }
     }
 }
