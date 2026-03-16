@@ -34,6 +34,12 @@ namespace TradeHub.BLL.Services
 
         public async Task<Wallet> CreateWalletAsync(int userId)
         {
+            var existing = await _walletRepo.GetByUserIdAsync(userId);
+            if (existing != null)
+            {
+                throw new BusinessException("Người dùng đã có ví");
+            }
+
             var wallet = new Wallet
             {
                 UserId = userId,
@@ -115,7 +121,8 @@ namespace TradeHub.BLL.Services
         public async Task<Wallet> GetWalletByUserIdOrThrowAsync(int userId)
         {
             var wallet = await _walletRepo.GetByUserIdAsync(userId)
-                            ?? throw new BusinessException($"Người dùng không có ví");
+                            ?? throw new BusinessException("Người dùng chưa mở ví");
+
             return wallet;
         }
 

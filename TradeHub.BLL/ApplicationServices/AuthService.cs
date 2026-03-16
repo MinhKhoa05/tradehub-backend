@@ -3,27 +3,21 @@ using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.Services;
-using TradeHub.DAL;
 
 namespace TradeHub.BLL.ApplicationServices
 {
     public class AuthService
     {
         private readonly UserService _user;
-        private readonly WalletService _wallet;
         
         private readonly TokenService _token;
         private readonly PasswordService _password;
 
-        private readonly DatabaseContext _database;
-        
-        public AuthService(UserService user, WalletService wallet, TokenService token, PasswordService password, DatabaseContext database)
+        public AuthService(UserService user, TokenService token, PasswordService password)
         {
             _user = user;
-            _wallet = wallet;
             _token = token;
             _password = password;
-            _database = database;
         }
 
         public async Task RegisterAsync(CreateUserRequest request)
@@ -33,13 +27,7 @@ namespace TradeHub.BLL.ApplicationServices
 
             request.Password = _password.Hash(request.Password);
 
-            await _database.ExecuteInTransactionAsync(async () =>
-            {
-                var userId = await _user.CreateUserAsync(request);
-
-                // tạo ví cho user
-                await _wallet.CreateWalletAsync(userId);
-            });
+            await _user.CreateUserAsync(request);
         }
 
         public async Task<string> LoginAsync(LoginRequest request)

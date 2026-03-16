@@ -6,12 +6,17 @@ namespace TradeHub.DAL
 {
     public class DatabaseContext : IAsyncDisposable
     {
+
         private readonly MySqlConnection _connection;
         private MySqlTransaction? _transaction;
 
-        public DatabaseContext(string connectionString)
+        static DatabaseContext()
         {
             DefaultTypeMap.MatchNamesWithUnderscores = true;
+        }
+
+        public DatabaseContext(string connectionString)
+        {
             _connection = new MySqlConnection(connectionString);
         }
 
@@ -126,7 +131,10 @@ namespace TradeHub.DAL
         public async ValueTask DisposeAsync()
         {
             if (_transaction != null)
+            {
                 await _transaction.DisposeAsync();
+                _transaction = null;
+            }
 
             await _connection.DisposeAsync();
         }
