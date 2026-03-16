@@ -85,16 +85,15 @@ namespace TradeHub.DAL.Repositories
         {
             var sql = """
                 SELECT *
-                FROM Products
-                WHERE normalized_name LIKE '%@NormalizedName%'
+                FROM products
+                WHERE normalized_name LIKE @SearchPattern
                 ORDER BY Id
-                OFFSET @Offset ROWS
-                FETCH NEXT @PageSize ROWS ONLY
+                LIMIT @PageSize OFFSET @Offset
             """;
 
             return await _database.QueryListAsync<Product>(sql, new
             {
-                NormalizedName = normalizedName,
+                SearchPattern = $"%{normalizedName}%",
                 Offset = (page - 1) * pageSize,
                 PageSize = pageSize
             });
