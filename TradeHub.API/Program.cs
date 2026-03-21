@@ -1,5 +1,7 @@
-﻿using TradeHub.API.Extensions;
+﻿using Microsoft.AspNetCore.Mvc;
+using TradeHub.API.Extensions;
 using TradeHub.API.Middlewares;
+using TradeHub.API.Filters;
 using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.Configurations;
 using TradeHub.BLL.Services;
@@ -10,6 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ValidationFilter>();
+});
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.SuppressModelStateInvalidFilter = true;
+});
+
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>

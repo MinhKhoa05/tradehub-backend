@@ -20,12 +20,13 @@
             };
         }
 
-        public static ApiResponse Fail(string message)
+        public static ApiResponse Fail(string message, object? data = null)
         {
             return new ApiResponse
             {
                 Success = false,
-                Message = message
+                Message = message,
+                Data = data
             };
         }
     }

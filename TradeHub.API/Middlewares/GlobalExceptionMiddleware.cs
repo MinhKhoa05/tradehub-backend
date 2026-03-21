@@ -28,7 +28,7 @@ namespace TradeHub.API.Middlewares
             }
         }
 
-        private static Task HandleExceptionAsync(HttpContext context, Exception ex)
+        private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
             context.Response.ContentType = "application/json";
 
@@ -43,8 +43,8 @@ namespace TradeHub.API.Middlewares
             context.Response.StatusCode = (int)statusCode;
 
             var message = statusCode == HttpStatusCode.InternalServerError
-                    ? "Đã xảy ra lỗi không mong muốn."
-                    : ex.Message;
+                ? "Đã xảy ra lỗi không mong muốn."
+                : ex.Message;
 
             var response = ApiResponse.Fail(message);
 
@@ -53,7 +53,7 @@ namespace TradeHub.API.Middlewares
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
 
-            return context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
         }
     }
 }
