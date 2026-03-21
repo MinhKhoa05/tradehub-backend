@@ -30,6 +30,13 @@ namespace TradeHub.API.Controllers
             return ApiOk(transactions);
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CreateWallet()
+        {
+            await _wallet.CreateWalletAsync(CurrentUserId);
+            return ApiOk();
+        }
+
         [HttpPost("transactions/deposit")]
         public async Task<IActionResult> Deposit([FromBody] int amount)
         {

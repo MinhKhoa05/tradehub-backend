@@ -17,22 +17,45 @@ namespace TradeHub.DAL.Repositories
             return await _database.QuerySingleAsync<Order>(sql, new { Id = orderId });
         }
 
-        public async Task<List<Order>> GetSellerOrdersAsync(int sellerId, OrderStatus? status)
+        public async  Task<List<Order>> GetAllByUserId(int userId, OrderStatus? status = null)
         {
             var sql = @"SELECT * FROM orders
-                        WHERE seller_id = @SellerId
+                        WHERE (seller_id = @UserId OR buyer_id = @UserId)
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryListAsync<Order>(sql, new { SellerId = sellerId, Status = status });
+            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
         }
 
-        public async Task<List<Order>> GetBuyerOrdersAsync(int buyerId, OrderStatus? status)
+        public async Task<List<Order>> GetSellerOrdersAsync(int userId, OrderStatus? status = null)
         {
             var sql = @"SELECT * FROM orders
-                        WHERE buyer_id = @BuyerId
+                        WHERE seller_id = @UserId
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryListAsync<Order>(sql, new { BuyerId = buyerId, Status = status });
+            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
+        }
+
+        public async Task<bool> IsOrderBelongsToUserAsync(int userId, int orderId)
+        {
+            var sql = @"
+                SELECT 1
+                FROM orders
+                WHERE id = @OrderId
+                  AND (buyer_id = @UserId OR seller_id = @UserId)
+                LIMIT 1"; // chỉ cần 1 dòng
+
+            var result = await _database.ExecuteScalarAsync<int?>(sql, new { UserId = userId, OrderId = orderId });
+
+            return result.HasValue;
+        }
+
+        public async Task<List<Order>> GetBuyerOrdersAsync(int userId, OrderStatus? status = null)
+        {
+            var sql = @"SELECT * FROM orders
+                        WHERE buyer_id = @UserId
+                        AND (@Status IS NULL OR status = @Status)
+                        ORDER BY created_at DESC";
+            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
         }
 
         public async Task<int> CreateAsync(Order order)

@@ -26,8 +26,8 @@ namespace TradeHub.DAL.Repositories
         public async Task<int> CreateAsync(User user)
         {
             string sql = @"
-                INSERT INTO users (name, email, password_hash, balance)
-                VALUES (@Name, @Email, @PasswordHash, @Balance)";
+                INSERT INTO users (name, email, password_hash)
+                VALUES (@Name, @Email, @PasswordHash)";
 
             return await _database.ExecuteInsertAsync(sql, user);
         }

@@ -21,7 +21,44 @@ namespace TradeHub.BLL.Services
             _orderHistoryRepo = orderHistoryRepo;
             _database = database;
         }
-        
+
+        public async Task<List<Order>> GetOrdersByIdAsync(int userId, OrderType type)
+        {
+            switch (type)
+            {
+                case OrderType.Seller:
+                    return await _orderRepo.GetSellerOrdersAsync(userId);
+
+                case OrderType.Buyer:
+                    return await _orderRepo.GetBuyerOrdersAsync(userId);
+
+                default:
+                    return await _orderRepo.GetAllByUserId(userId);
+            }
+        }
+
+        public async Task<List<OrderHistory>> GetOrderHistoriesAsync(int userId, int orderId)
+        {
+            var isBelongToUser = await _orderRepo.IsOrderBelongsToUserAsync(userId, orderId);
+            if (!isBelongToUser)
+            {
+                throw new BusinessException("Đơn hàng không tồn tại hoặc bạn không có quyền chi tiết đơn hàng này");
+            }
+            
+            return await _orderHistoryRepo.GetByOrderIdAsync(orderId);
+        }
+
+        public async Task<List<OrderItem>> GetOrderItemsAsync(int userId, int orderId)
+        {
+            var isBelongToUser = await _orderRepo.IsOrderBelongsToUserAsync(userId, orderId);
+            if (!isBelongToUser)
+            {
+                throw new BusinessException("Đơn hàng không tồn tại hoặc bạn không có quyền chi tiết đơn hàng này");
+            }
+
+            return await _orderItemRepo.GetByOrderIdAsync(orderId);
+        }
+
         public async Task<List<int>> CreateOrdersAsync(int userId, CheckoutRequest request)
         {
             if (request.Items == null || request.Items.Count == 0)
@@ -40,6 +77,35 @@ namespace TradeHub.BLL.Services
             }
 
             return orderIds;
+        }
+
+        public async Task UpdateStatusAsync(int userId, int orderId, UpdateOrderStatusRequest request)
+        {
+            var order = await _orderRepo.GetByIdAsync(orderId)
+                            ?? throw new BusinessException("Đơn hàng không tồn tại");
+
+            var currentStatus = order.Status;
+
+            if (!IsValidStatusTransition(currentStatus, request.ToStatus))
+                throw new BusinessException($"Chuyển đổi status không khả dụng: {currentStatus} -> {request.ToStatus}");
+
+            await _database.ExecuteInTransactionAsync(async () =>
+            {
+                var affectedRows = await _orderRepo.UpdateStatusAsync(orderId, request.ToStatus);
+
+                if (affectedRows == 0)
+                    throw new BusinessException("Đơn hàng không tồn tại");
+
+                await _orderHistoryRepo.CreateAsync(new OrderHistory
+                {
+                    OrderId = orderId,
+                    FromStatus = currentStatus,
+                    ToStatus = request.ToStatus,
+                    ChangedBy = userId,
+                    ActorType = request.ActorType,
+                    Note = request.Note
+                });
+            });
         }
 
         private async Task<int> CreateOrderForSellerAsync(int userId, int sellerId, PaymentMethod paymentMethod, List<CheckoutItem> items)
@@ -87,35 +153,6 @@ namespace TradeHub.BLL.Services
             };
 
             await _orderHistoryRepo.CreateAsync(history);
-        }
-
-        public async Task UpdateStatusAsync(int userId, int orderId, UpdateOrderStatusRequest request)
-        {
-            var order = await _orderRepo.GetByIdAsync(orderId)
-                            ?? throw new BusinessException("Đơn hàng không tồn tại");
-
-            var currentStatus = order.Status;
-
-            if (!IsValidStatusTransition(currentStatus, request.ToStatus))
-                throw new BusinessException($"Chuyển đổi status không khả dụng: {currentStatus} -> {request.ToStatus}");
-
-            await _database.ExecuteInTransactionAsync(async () =>
-            {
-                var affectedRows = await _orderRepo.UpdateStatusAsync(orderId, request.ToStatus);
-
-                if (affectedRows == 0)
-                    throw new BusinessException("Đơn hàng không tồn tại");
-
-                await _orderHistoryRepo.CreateAsync(new OrderHistory
-                {
-                    OrderId = orderId,
-                    FromStatus = currentStatus,
-                    ToStatus = request.ToStatus,
-                    ChangedBy = userId,
-                    ActorType = request.ActorType,
-                    Note = request.Note
-                });
-            });
         }
 
         private static int CalculateOrderTotal(List<CheckoutItem> items)
