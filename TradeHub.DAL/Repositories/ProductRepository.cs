@@ -1,4 +1,5 @@
 ﻿using TradeHub.DAL.Entities;
+using TradeHub.DAL.DTOs;
 
 namespace TradeHub.DAL.Repositories
 {
@@ -81,15 +82,21 @@ namespace TradeHub.DAL.Repositories
             return await _database.ExecuteAsync(sql, new { Quantity = quantity,Id = productId });
         }
 
+        public async Task<int> DecreaseStockRangeAsync(List<ProductStockUpdate> products)
+        {
+            var sql = "UPDATE products SET stock = stock - @Quantity WHERE id = @Id AND stock >= @Quantity";
+            return await _database.ExecuteAsync(sql, products);
+        }
+
         public async Task<List<Product>> SearchByNameAsync(string normalizedName, int page, int pageSize)
         {
-            var sql = """
+            var sql = @"
                 SELECT *
                 FROM products
                 WHERE normalized_name LIKE @SearchPattern
                 ORDER BY Id
                 LIMIT @PageSize OFFSET @Offset
-            """;
+            ";
 
             return await _database.QueryListAsync<Product>(sql, new
             {

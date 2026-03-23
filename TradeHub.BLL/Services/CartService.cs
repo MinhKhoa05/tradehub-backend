@@ -1,6 +1,7 @@
 ﻿using TradeHub.BLL.DTOs.Carts;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
+using TradeHub.DAL.Queries;
 using TradeHub.DAL.Repositories;
 
 namespace TradeHub.BLL.Services
@@ -8,15 +9,28 @@ namespace TradeHub.BLL.Services
     public class CartService
     {
         private readonly CartItemRepository _cartItemRepo;
+        private readonly CartItemQuery _cartItemQuery;
 
-        public CartService(CartItemRepository cartItemRepo)
+        public CartService(CartItemRepository cartItemRepo, CartItemQuery cartItemQuery)
         {
             _cartItemRepo = cartItemRepo;
+            _cartItemQuery = cartItemQuery;
         }
 
         public async Task<List<CartItem>> GetCartItemsByUserIdAsync(int userId)
         {
             return await _cartItemRepo.GetByUserIdAsync(userId);
+        }
+
+        public async Task<List<CartDetailDTO>> GetCartDetailDTOsAsync(int userId)
+        {
+            var cartItems = await _cartItemQuery.GetCartDetailDTOsAsync(userId);
+
+            if (!cartItems.Any())
+            {
+                throw new BusinessException("Giỏ hàng trống");
+            }
+            return cartItems;
         }
 
         public async Task<int> GetTotalQuantityAsync(int userId)
@@ -68,9 +82,15 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Vật phẩm không tồn tại trong giỏ hàng");
         }
 
-        public async Task ClearAsync(int userId)
+        public async Task ClearCartAsync(int userId)
         {
-            await _cartItemRepo.DeleteByUserIdAsync(userId);
+            // Xóa tất cả cart items của user
+            var affected = await _cartItemRepo.DeleteByUserIdAsync(userId);
+
+            if (affected == 0)
+            {
+                throw new BusinessException("Giỏ hàng trống");
+            }
         }
     }
 }

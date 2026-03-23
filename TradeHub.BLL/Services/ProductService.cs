@@ -3,6 +3,7 @@ using TradeHub.DAL.Entities;
 using TradeHub.BLL.DTOs.Products;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Utils;
+using TradeHub.DAL.DTOs;
 
 namespace TradeHub.BLL.Services
 {
@@ -119,14 +120,18 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Tồn kho không đủ");
         }
 
-        public async Task DecreaseStockForOrderAsync(int productId, int quantity)
+        public async Task DecreaseStockRangeAsync(List<ProductStockUpdate> productStockUpdates)
         {
-            if (quantity <= 0)
-                throw new BusinessException("Số lượng phải lớn hơn 0");
+            if (productStockUpdates.Count == 0)
+            {
+                throw new BusinessException("Không có sản phẩm để cập nhật");
+            }
 
-            var affected = await _productRepo.DecreaseStockAsync(productId, quantity);
-            if (affected == 0)
-                throw new BusinessException("Tồn kho không đủ");
+            var affected = await _productRepo.DecreaseStockRangeAsync(productStockUpdates);
+            if (affected != productStockUpdates.Count)
+            {
+                throw new BusinessException("Một vài sản phẩm không đủ tồn kho");
+            }
         }
 
         //public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)

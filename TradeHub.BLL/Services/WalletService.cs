@@ -73,13 +73,17 @@ namespace TradeHub.BLL.Services
             return await ProcessTransactionAsync(userId, amount, transactionInfo);
         }
 
-        public async Task<WalletTransaction> PayOrderAsync(int userId, int orderId, int totalAmount)
+        public async Task<WalletTransaction> PayForOrdersAsync(int userId, List<int> orderIds, int totalAmount)
         {
+            if (orderIds == null || !orderIds.Any())
+                throw new BusinessException("Không có đơn hàng để thanh toán");
+
             var transactionInfo = new WalletTransactionInfo
             {
                 Type = WalletTransactionType.PaidOrder,
-                Description = $"Thanh toán đơn hàng #{orderId}, Số tiền {totalAmount}",
-                ReferenceId = orderId,
+                // Ghi summary: số lượng đơn, list mã đơn, tổng tiền, ngày
+                Description = $"Thanh toán {orderIds.Count} đơn hàng (Mã đơn: {string.Join(",", orderIds)}), " +
+                              $"Tổng tiền {totalAmount}, Ngày {DateTime.Now:dd/MM/yyyy}",
                 IsDecreaseBalance = true
             };
 

@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.DTOs.Carts;
 using TradeHub.BLL.Services;
 
@@ -12,18 +11,16 @@ namespace TradeHub.API.Controllers
     public class CartController : BaseController
     {
         private readonly CartService _cart;
-        private readonly CartViewUsecase _cartView;
 
-        public CartController(CartService cart, CartViewUsecase cartView)
+        public CartController(CartService cart)
         {
             _cart = cart;
-            _cartView = cartView;
         }
 
         [HttpGet("items")]
         public async Task<IActionResult> GetCartItems()
         {
-            var items = await _cartView.GetCartViewByUserIdAsync(CurrentUserId);
+            var items = await _cart.GetCartDetailDTOsAsync(CurrentUserId);
             return ApiOk(items);
         }
 

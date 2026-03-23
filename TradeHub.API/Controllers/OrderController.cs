@@ -24,8 +24,8 @@ namespace TradeHub.API.Controllers
         [HttpPost]
         public async Task<IActionResult> PlaceOrder()
         {
-            var orderIds = await _orderUsecase.PlaceOrderAsync(CurrentUserId, PaymentMethod.Cod);
-            return ApiOk(orderIds);
+            await _orderUsecase.PlaceOrderAsync(CurrentUserId, PaymentMethod.Cod);
+            return ApiOk();
         }
 
         [HttpGet("me")]

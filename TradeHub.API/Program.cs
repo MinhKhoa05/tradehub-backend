@@ -7,6 +7,7 @@ using TradeHub.BLL.Configurations;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Repositories;
+using TradeHub.DAL.Queries;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -88,6 +89,10 @@ builder.Services.AddScoped<OrderHistoryRepository>();
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<WalletTransactionRepository>();
 
+// ================= QUERIES =================
+
+builder.Services.AddScoped<CartItemQuery>();
+
 
 // ================= SERVICES =================
 
@@ -101,7 +106,6 @@ builder.Services.AddScoped<WalletService>();
 // ================= APPLICATION SERVICES =================
 
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<CartViewUsecase>();
 builder.Services.AddScoped<OrderUsecase>();
 
 
