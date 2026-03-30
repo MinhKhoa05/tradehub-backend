@@ -1,13 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TradeHub.API;
 using TradeHub.API.Extensions;
-using TradeHub.API.Middlewares;
 using TradeHub.API.Filters;
+using TradeHub.API.Middlewares;
 using TradeHub.BLL.ApplicationServices;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.Configurations;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
-using TradeHub.DAL.Repositories;
 using TradeHub.DAL.Queries;
+using TradeHub.DAL.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,8 +111,10 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OrderUsecase>();
 
 
-// ================= OTHER SERVICES =================
+// ================= COMMON SERVICES =================
+builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<PasswordService>();
 

@@ -20,35 +20,35 @@ namespace TradeHub.API.Controllers
         [HttpGet("items")]
         public async Task<IActionResult> GetCartItems()
         {
-            var items = await _cart.GetCartDetailDTOsAsync(CurrentUserId);
+            var items = await _cart.GetMyDetailsAsync();
             return ApiOk(items);
         }
 
         [HttpGet("items/summary")]
         public async Task<IActionResult> GetSummaryAsync()
         {
-            var count  = await _cart.GetTotalQuantityAsync(CurrentUserId);
+            var count  = await _cart.GetMyTotalQuantityAsync();
             return ApiOk(count);
         }
 
         [HttpPost("items")]
         public async Task<IActionResult> AddItem(CartItemRequest request)
         {
-            var cartItem = await _cart.AddItemAsync(CurrentUserId, request);
+            var cartItem = await _cart.AddItemAsync(request);
             return ApiCreated(cartItem);
         }
 
         [HttpPut("items/{productId}")]
         public async Task<IActionResult> UpdateQuantity(int productId, [FromBody] int quantity)
         {
-            await _cart.UpdateQuantityAsync(CurrentUserId, productId, quantity);
+            await _cart.UpdateItemQuantityAsync(productId, quantity);
             return ApiNoContent();
         }
 
         [HttpDelete("items/{productId}")]
         public async Task<IActionResult> RemoveCartItem(int productId)
         {
-            await _cart.RemoveItemAsync(CurrentUserId, productId);
+            await _cart.RemoveItemAsync(productId);
             return ApiNoContent();
         }
     }

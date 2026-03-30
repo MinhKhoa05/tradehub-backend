@@ -1,20 +1,24 @@
-﻿using TradeHub.DAL.Repositories;
-using TradeHub.DAL.Entities;
+﻿using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Products;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Utils;
 using TradeHub.DAL.DTOs;
+using TradeHub.DAL.Entities;
+using TradeHub.DAL.Repositories;
 
 namespace TradeHub.BLL.Services
 {
-    public class ProductService
+    public class ProductService : BaseService
     {
         private readonly ProductRepository _productRepo;
 
-        public ProductService(ProductRepository productRepo)
+        public ProductService(ProductRepository productRepo, IIdentityService identityService)
+            : base(identityService)
         {
             _productRepo = productRepo;
         }
+
+        // ===== PUBLIC (ai cũng dùng được) =====
 
         public async Task<List<Product>> GetProductsAsync()
         {
@@ -23,23 +27,18 @@ namespace TradeHub.BLL.Services
 
         public async Task<Product> GetProductByIdOrThrowAsync(int productId)
         {
-            var product = await _productRepo.GetByIdAsync(productId)
-                                ?? throw new BusinessException("Sản phẩm không tồn tại");    
-
-            return product;
+            return await _productRepo.GetByIdAsync(productId)
+                ?? throw new BusinessException("Sản phẩm không tồn tại");
         }
 
-        public async Task<List<Product>> GetProductsByIdsAsync(List<int> ids)
+        // ===== MY (seller hiện tại) =====
+
+        public async Task<List<Product>> GetMyProductsAsync()
         {
-            return await _productRepo.GetByIdsAsync(ids);
+            return await _productRepo.GetBySellerAsync(CurrentUserId);
         }
 
-        public async Task<List<Product>> GetProductsBySellerAsync(int sellerId)
-        {
-            return await _productRepo.GetBySellerAsync(sellerId);
-        }
-
-        public async Task<Product> CreateProductAsync(int sellerId, CreateProductRequest request)
+        public async Task<Product> CreateProductAsync(CreateProductRequest request)
         {
             var product = new Product
             {
@@ -48,22 +47,19 @@ namespace TradeHub.BLL.Services
                 Description = request.Description,
                 Price = request.Price,
                 Stock = 0,
-                SellerId = sellerId,
+                SellerId = CurrentUserId,
             };
 
             product.Id = await _productRepo.CreateAsync(product);
             return product;
         }
 
-        public async Task<Product> UpdateProductAsync(int userId, int productId, UpdateProductRequest request)
+        public async Task<Product> UpdateProductAsync(int productId, UpdateProductRequest request)
         {
             if (string.IsNullOrEmpty(request.Name) && request.Description == null)
                 throw new BusinessException("Không có dữ liệu để cập nhật");
-            
-            var product = await GetProductByIdOrThrowAsync(productId);
-            
-            if (product.SellerId != userId)
-                throw new BusinessException("Không có quyền để cập nhật");
+
+            var product = await GetProductForUpdateAsync(productId);
 
             if (request.Name != null)
             {
@@ -71,79 +67,80 @@ namespace TradeHub.BLL.Services
                 product.NormalizedName = NormalizeName.Normalize(request.Name);
             }
 
-            product.Description = request.Description ?? product.Description;
+            if (request.Description != null)
+            {
+                product.Description = request.Description;
+            }
 
             await _productRepo.UpdateAsync(productId, product);
             return product;
         }
 
-        public async Task UpdatePriceBySellerAsync(int productId, int newPrice, int userId)
+        public async Task UpdateProductPriceAsync(int productId, int newPrice)
         {
             if (newPrice < 0)
                 throw new BusinessException("Giá của sản phẩm không được âm");
 
-            var product = await GetProductByIdOrThrowAsync(productId);
-            if (product.SellerId != userId)
-                throw new BusinessException("Không có quyền để cập nhật");
+            await GetProductForUpdateAsync(productId);
 
             var affected = await _productRepo.UpdatePriceAsync(productId, newPrice);
 
             if (affected == 0)
-                throw new BusinessException("Sản phẩm không tồn tại");
+                throw new BusinessException("Cập nhật thất bại, vui lòng kiểm tra lại.");
         }
 
-        public async Task IncreaseStockBySellerAsync(int productId, int quantity, int userId)
+        public async Task IncreaseStockAsync(int productId, int quantity)
         {
             if (quantity <= 0)
                 throw new BusinessException("Số lượng phải lớn hơn 0");
 
-            var product = await GetProductByIdOrThrowAsync(productId);
-            if (product.SellerId != userId)
-                throw new BusinessException("Không có quyền để cập nhật");
+            await GetProductForUpdateAsync(productId);
 
             var affected = await _productRepo.IncreaseStockAsync(productId, quantity);
+
             if (affected == 0)
-                throw new BusinessException("Sản phẩm không tồn tại");
+                throw new BusinessException("Cập nhật thất bại, vui lòng kiểm tra lại.");
         }
 
-        public async Task DecreaseStockBySellerAsync(int productId, int quantity, int userId)
+        public async Task DecreaseStockAsync(int productId, int quantity)
         {
             if (quantity <= 0)
                 throw new BusinessException("Số lượng phải lớn hơn 0");
 
-            var product = await GetProductByIdOrThrowAsync(productId);
-            if (product.SellerId != userId)
-                throw new BusinessException("Không có quyền để cập nhật");
+            var product = await GetProductForUpdateAsync(productId);
+
+            if (product.Stock < quantity)
+                throw new BusinessException($"Tồn kho không đủ. Hiện có: {product.Stock}, yêu cầu: {quantity}");
 
             var affected = await _productRepo.DecreaseStockAsync(productId, quantity);
+
             if (affected == 0)
-                throw new BusinessException("Tồn kho không đủ");
+                throw new BusinessException("Cập nhật thất bại, vui lòng kiểm tra lại.");
         }
 
-        public async Task DecreaseStockRangeAsync(List<ProductStockUpdate> productStockUpdates)
+        // ===== SYSTEM (không phụ thuộc user) =====
+
+        public async Task DecreaseStockRangeAsync(List<ProductStockUpdate> updates)
         {
-            if (productStockUpdates.Count == 0)
-            {
+            if (updates.Count == 0)
                 throw new BusinessException("Không có sản phẩm để cập nhật");
-            }
 
-            var affected = await _productRepo.DecreaseStockRangeAsync(productStockUpdates);
-            if (affected != productStockUpdates.Count)
-            {
+            var affected = await _productRepo.DecreaseStockRangeAsync(updates);
+
+            if (affected != updates.Count)
                 throw new BusinessException("Một vài sản phẩm không đủ tồn kho");
-            }
         }
 
-        //public async Task<List<Product>> SearchProductByNameAsync(string productName, int page)
-        //{
-        //    string normalizedName = NormalizeName.Normalize(productName);
+        // ===== PRIVATE =====
 
-        //    if (string.IsNullOrEmpty(normalizedName))
-        //    {
-        //        return new List<Product>();
-        //    }
+        private async Task<Product> GetProductForUpdateAsync(int productId)
+        {
+            var product = await GetProductByIdOrThrowAsync(productId);
 
-        //    return await _productRepo.SearchByNameAsync(normalizedName, page, 20);
-        //}
+            if (product.SellerId != CurrentUserId)
+                throw new BusinessException("Không có quyền để cập nhật");
+
+            return product;
+        }
     }
 }

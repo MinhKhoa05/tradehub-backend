@@ -36,42 +36,42 @@ namespace TradeHub.API.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetMyProducts()
         {
-            var products = await _product.GetProductsBySellerAsync(CurrentUserId);
+            var products = await _product.GetMyProductsAsync();
             return ApiOk(products);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateProduct(CreateProductRequest request)
         {
-            var product = await _product.CreateProductAsync(CurrentUserId, request);
+            var product = await _product.CreateProductAsync(request);
             return ApiCreated(product);
         }
 
         [HttpPatch("{id}")]
         public async Task<IActionResult> UpdateProduct(int id, UpdateProductRequest request)
         {
-            var product = await _product.UpdateProductAsync(CurrentUserId, id, request);
+            var product = await _product.UpdateProductAsync(id, request);
             return ApiOk(product);
         }
 
         [HttpPut("{id}/price")]
         public async Task<IActionResult> UpdatePrice(int id, [FromBody] int newPrice)
         {
-            await _product.UpdatePriceBySellerAsync(id, newPrice, CurrentUserId);
+            await _product.UpdateProductPriceAsync(id, newPrice);
             return ApiNoContent();
         }
 
         [HttpPut("{id}/stock/increase")]
         public async Task<IActionResult> IncreaseStock(int id, [FromBody] int quantity)
         {
-            await _product.IncreaseStockBySellerAsync(id, quantity, CurrentUserId);
+            await _product.IncreaseStockAsync(id, quantity);
             return ApiNoContent();
         }
 
         [HttpPut("{id}/stock/decrease")]
         public async Task<IActionResult> DecreaseStock(int id, [FromBody] int quantity)
         {
-            await _product.DecreaseStockBySellerAsync(id, quantity, CurrentUserId);
+            await _product.DecreaseStockAsync(id, quantity);
             return ApiNoContent();
         }
     }

@@ -1,103 +1,103 @@
-﻿using TradeHub.DAL.Repositories;
-using TradeHub.DAL.Entities;
+﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.DTOs.Wallets;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
-using TradeHub.BLL.DTOs.Wallets;
+using TradeHub.DAL.Entities;
+using TradeHub.DAL.Repositories;
 
 namespace TradeHub.BLL.Services
 {
-    public class WalletService
+    public class WalletService : BaseService
     {
         private readonly WalletRepository _walletRepo;
         private readonly WalletTransactionRepository _walletTxRepo;
         private readonly DatabaseContext _database;
-        
-        public WalletService(WalletRepository walletRepo, WalletTransactionRepository walletTxRepo, DatabaseContext database)
+
+        public WalletService(
+            WalletRepository walletRepo,
+            WalletTransactionRepository walletTxRepo,
+            DatabaseContext database,
+            IIdentityService identityService)
+            : base(identityService)
         {
             _walletRepo = walletRepo;
             _walletTxRepo = walletTxRepo;
             _database = database;
         }
-        
-        public async Task<List<WalletTransaction>> GetWalletTransactionsAsync(int userId)
-        {
-            var wallet = await GetWalletByUserIdOrThrowAsync(userId);
 
+        // ===== READ (Lấy dữ liệu của Tôi) =====
+
+        public async Task<List<WalletTransaction>> GetMyTransactionsAsync()
+        {
+            var wallet = await GetOrCreateWalletInternalAsync();
             return await _walletTxRepo.GetByWalletIdAsync(wallet.Id);
         }
 
-        public async Task<int> GetWalletBalanceAsync(int userId)
+        public async Task<int> GetMyBalanceAsync()
         {
-            var wallet = await GetWalletByUserIdOrThrowAsync(userId);
+            var wallet = await GetOrCreateWalletInternalAsync();
             return wallet.Balance;
         }
 
-        public async Task<Wallet> CreateWalletAsync(int userId)
+        // ===== ACTIONS (Thao tác nghiệp vụ thuần túy) =====
+
+        public async Task EnsureBalanceIsEnoughAsync(int requiredAmount)
         {
-            var existing = await _walletRepo.GetByUserIdAsync(userId);
-            if (existing != null)
-            {
-                throw new BusinessException("Người dùng đã có ví");
-            }
+            var balance = await GetMyBalanceAsync();
 
-            var wallet = new Wallet
-            {
-                UserId = userId,
-                Balance = 0,
-            };
-
-            wallet.Id = await _walletRepo.CreateAsync(wallet);
-            return wallet;
+            if (balance < requiredAmount)
+                throw new BusinessException("Số dư ví không đủ để thực hiện giao dịch này.");
         }
 
-        public async Task<WalletTransaction> DepositAsync(int userId, int amount)
+        public async Task<WalletTransaction> DepositAsync(int amount)
         {
-            var transactionInfo = new WalletTransactionInfo
+            var info = new WalletTransactionInfo
             {
                 Type = WalletTransactionType.Deposit,
-                Description = $"Nạp tiền, số tiền {amount}",
+                Description = $"Nạp tiền vào ví: {amount:N0} VNĐ",
             };
 
-            return await ProcessTransactionAsync(userId, amount, transactionInfo);
+            return await ProcessTransactionInternalAsync(amount, info);
         }
 
-        public async Task<WalletTransaction> WithdrawAsync(int userId, int amount)
+        public async Task<WalletTransaction> WithdrawAsync(int amount)
         {
-            var transactionInfo = new WalletTransactionInfo
+            var info = new WalletTransactionInfo
             {
                 Type = WalletTransactionType.Withdraw,
-                Description = $"Rút tiền, số tiền {amount}",
+                Description = $"Rút tiền từ ví: {amount:N0} VNĐ",
                 IsDecreaseBalance = true
             };
 
-            return await ProcessTransactionAsync(userId, amount, transactionInfo);
+            return await ProcessTransactionInternalAsync(amount, info);
         }
 
-        public async Task<WalletTransaction> PayForOrdersAsync(int userId, List<int> orderIds, int totalAmount)
+        public async Task<WalletTransaction> PayForOrdersAsync(List<int> orderIds, int totalAmount)
         {
             if (orderIds == null || !orderIds.Any())
-                throw new BusinessException("Không có đơn hàng để thanh toán");
+                throw new BusinessException("Không có đơn hàng nào để thanh toán.");
 
-            var transactionInfo = new WalletTransactionInfo
+            var info = new WalletTransactionInfo
             {
                 Type = WalletTransactionType.PaidOrder,
-                // Ghi summary: số lượng đơn, list mã đơn, tổng tiền, ngày
-                Description = $"Thanh toán {orderIds.Count} đơn hàng (Mã đơn: {string.Join(",", orderIds)}), " +
-                              $"Tổng tiền {totalAmount}, Ngày {DateTime.Now:dd/MM/yyyy}",
+                Description = $"Thanh toán {orderIds.Count} đơn hàng (Mã: {string.Join(", ", orderIds)}). " +
+                              $"Tổng tiền: {totalAmount:N0} VNĐ",
                 IsDecreaseBalance = true
             };
 
-            return await ProcessTransactionAsync(userId, totalAmount, transactionInfo);
+            return await ProcessTransactionInternalAsync(totalAmount, info);
         }
 
-        private async Task<WalletTransaction> ProcessTransactionAsync(int userId, int amount, WalletTransactionInfo info)
+        // ===== INTERNAL / PRIVATE (Xử lý ngầm & Bảo mật) =====
+
+        private async Task<WalletTransaction> ProcessTransactionInternalAsync(int amount, WalletTransactionInfo info)
         {
             if (amount <= 0)
-                throw new BusinessException("Số tiền phải lớn hơn 0");
+                throw new BusinessException("Số tiền giao dịch phải lớn hơn 0.");
 
-            var wallet = await GetWalletByUserIdOrThrowAsync(userId);
+            var wallet = await GetOrCreateWalletInternalAsync();
 
-            var walletTransaction = new WalletTransaction
+            var tx = new WalletTransaction
             {
                 WalletId = wallet.Id,
                 Amount = info.IsDecreaseBalance ? -amount : amount,
@@ -106,36 +106,45 @@ namespace TradeHub.BLL.Services
                 ReferenceId = info.ReferenceId,
             };
 
+            // Dùng Transaction để đảm bảo tính toàn vẹn dữ liệu
             await _database.ExecuteInTransactionAsync(async () =>
             {
                 if (info.IsDecreaseBalance)
                 {
-                    await DecreaseBalanceOrThrowAsync(userId, amount);
-                } else
+                    // Chặn Race Condition bằng affected rows (Fail-fast xịn)
+                    var affected = await _walletRepo.DecreaseBalanceAsync(CurrentUserId, amount);
+
+                    if (affected == 0)
+                        throw new BusinessException("Giao dịch thất bại: Số dư không đủ.");
+                }
+                else
                 {
-                    await _walletRepo.IncreaseBalanceAsync(userId, amount);
+                    await _walletRepo.IncreaseBalanceAsync(CurrentUserId, amount);
                 }
 
-                walletTransaction.Id = await _walletTxRepo.CreateAsync(walletTransaction);
+                // Lưu nhật ký giao dịch
+                tx.Id = await _walletTxRepo.CreateAsync(tx);
             });
 
-            return walletTransaction;
+            return tx;
         }
 
-        public async Task<Wallet> GetWalletByUserIdOrThrowAsync(int userId)
+        private async Task<Wallet> GetOrCreateWalletInternalAsync()
         {
-            var wallet = await _walletRepo.GetByUserIdAsync(userId)
-                            ?? throw new BusinessException("Người dùng chưa mở ví");
+            var wallet = await _walletRepo.GetByUserIdAsync(CurrentUserId);
+
+            if (wallet == null)
+            {
+                // Tự động khởi tạo ví nếu User chưa có
+                wallet = new Wallet
+                {
+                    UserId = CurrentUserId,
+                    Balance = 0
+                };
+                wallet.Id = await _walletRepo.CreateAsync(wallet);
+            }
 
             return wallet;
-        }
-
-        private async Task DecreaseBalanceOrThrowAsync(int userId, int amount)
-        {
-            var affected = await _walletRepo.DecreaseBalanceAsync(userId, amount);
-
-            if (affected == 0)
-                throw new BusinessException("Số dư không đủ để thực hiện");
         }
     }
 }

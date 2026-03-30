@@ -1,7 +1,6 @@
-﻿using TradeHub.BLL.DTOs.Carts;
-using TradeHub.BLL.DTOs.Orders;
-using TradeHub.BLL.Exceptions;
+﻿using TradeHub.BLL.DTOs.Orders;
 using TradeHub.BLL.Services;
+using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
 using TradeHub.DAL.DTOs;
 using TradeHub.DAL.Entities;
@@ -16,8 +15,13 @@ namespace TradeHub.BLL.ApplicationServices
         private readonly CartService _cart;
         private readonly WalletService _wallet;
         private readonly DatabaseContext _database;
-        
-        public OrderUsecase(ProductService product, OrderService order, CartService cart, WalletService wallet, DatabaseContext database)
+
+        public OrderUsecase(
+            ProductService product,
+            OrderService order,
+            CartService cart,
+            WalletService wallet,
+            DatabaseContext database)
         {
             _product = product;
             _order = order;
@@ -26,50 +30,65 @@ namespace TradeHub.BLL.ApplicationServices
             _database = database;
         }
 
-        public async Task PlaceOrderAsync(int userId, PaymentMethod paymentMethod)
+        // Đổi tên từ PlaceMyOrder sang PlaceOrderAsync cho chuyên nghiệp
+        public async Task PlaceOrderAsync(PaymentMethod paymentMethod)
         {
-            var cartItemDTOs = await _cart.GetCartDetailDTOsAsync(userId);
+            // 1. Lấy thông tin giỏ hàng (Read - Giữ My)
+            var cartItems = await _cart.GetMyDetailsAsync();
 
-            var productStockUpdates = cartItemDTOs
+            if (cartItems.Count == 0)
+                throw new BusinessException("Giỏ hàng của bạn đang trống.");
+
+            var totalAmount = cartItems.Sum(i => i.Price * i.Quantity);
+
+            // 2. Kiểm tra số dư ví (Action - Bỏ My theo Service đã sửa)
+            if (paymentMethod == PaymentMethod.Wallet)
+            {
+                await _wallet.EnsureBalanceIsEnoughAsync(totalAmount);
+            }
+
+            var stockUpdates = cartItems
                 .Select(item => new ProductStockUpdate(item.ProductId, item.Quantity))
                 .ToList();
 
-            // Map thành request order
             var request = new CheckoutRequest
             {
                 PaymentMethod = paymentMethod,
-                Items = MapToCheckoutItems(cartItemDTOs)
+                Items = MapToCheckoutItems(cartItems)
             };
 
+            // 3. Thực thi nghiệp vụ phức tạp trong Transaction
             await _database.ExecuteInTransactionAsync(async () =>
             {
-                // Cập nhật tồn kho sản phẩm
-                await _product.DecreaseStockRangeAsync(productStockUpdates);
+                // Trừ tồn kho (Hành động khách quan)
+                await _product.DecreaseStockRangeAsync(stockUpdates);
 
-                // Tạo order
-                var orderIds = await _order.CreateOrdersAsync(userId, request);
+                // Tạo đơn hàng (Bỏ My)
+                var orderIds = await _order.CreateOrdersAsync(request);
 
+                // Thanh toán (Bỏ My)
                 if (paymentMethod == PaymentMethod.Wallet)
                 {
-                    var totalAmount = request.Items.Sum(i => i.UnitPrice * i.Quantity);
-                    await _wallet.PayForOrdersAsync(userId, orderIds, totalAmount);
+                    await _wallet.PayForOrdersAsync(orderIds, totalAmount);
                 }
-            });
 
-            await _cart.ClearCartAsync(userId);
+                // Xóa giỏ hàng (Bỏ My)
+                var affected = await _cart.ClearAsync();
+
+                if (affected == 0)
+                    throw new BusinessException("Không thể hoàn tất đặt hàng do giỏ hàng không tồn tại.");
+            });
         }
 
-        private static List<CheckoutItem> MapToCheckoutItems(List<CartDetailDTO> cartItemDTOs)
+        private static List<CheckoutItem> MapToCheckoutItems(List<CartDetailDTO> cartItems)
         {
-            return cartItemDTOs
-                .Select(item => new CheckoutItem
-                {
-                    ProductId = item.ProductId,
-                    Quantity = item.Quantity,
-                    SellerId = item.SellerId,
-                    UnitPrice = item.Price
-                })
-                .ToList();
+            return cartItems.Select(item => new CheckoutItem
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                SellerId = item.SellerId,
+                UnitPrice = item.Price
+            }).ToList();
         }
     }
 }

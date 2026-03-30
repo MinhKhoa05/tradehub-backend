@@ -24,28 +24,28 @@ namespace TradeHub.API.Controllers
         [HttpPost]
         public async Task<IActionResult> PlaceOrder()
         {
-            await _orderUsecase.PlaceOrderAsync(CurrentUserId, PaymentMethod.Cod);
+            await _orderUsecase.PlaceOrderAsync(PaymentMethod.Cod);
             return ApiOk();
         }
 
         [HttpGet("me")]
         public async Task<IActionResult> GetMyOrders([FromQuery] OrderType type = OrderType.All)
         {
-            var orders = await _orderService.GetOrdersByIdAsync(CurrentUserId, type);
+            var orders = await _orderService.GetMyOrdersAsync(type);
             return ApiOk(orders);
         }
 
         [HttpGet("{orderId}/history")]
         public async Task<IActionResult> GetOrderHistories(int orderId)
         {
-            var histories = await _orderService.GetOrderHistoriesAsync(CurrentUserId, orderId);
+            var histories = await _orderService.GetHistoriesAsync(orderId);
             return ApiOk(histories);
         }
 
         [HttpGet("{orderId}/items")]
         public async Task<IActionResult> GetOrderItems(int orderId)
         {
-            var histories = await _orderService.GetOrderItemsAsync(CurrentUserId, orderId);
+            var histories = await _orderService.GetItemsAsync(orderId);
             return ApiOk(histories);
         }
     }

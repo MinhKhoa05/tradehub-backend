@@ -42,7 +42,7 @@ namespace TradeHub.DAL.Repositories
                 FROM orders
                 WHERE id = @OrderId
                   AND (buyer_id = @UserId OR seller_id = @UserId)
-                LIMIT 1"; // chỉ cần 1 dòng
+                LIMIT 1";
 
             var result = await _database.ExecuteScalarAsync<int?>(sql, new { UserId = userId, OrderId = orderId });
 

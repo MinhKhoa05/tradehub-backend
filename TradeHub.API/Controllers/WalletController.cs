@@ -17,37 +17,30 @@ namespace TradeHub.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetWallet()
+        public async Task<IActionResult> GetMyBalance()
         {
-            var wallet = await _wallet.GetWalletByUserIdOrThrowAsync(CurrentUserId);
+            var wallet = await _wallet.GetMyBalanceAsync();
             return ApiOk(wallet);
         }
 
         [HttpGet("transactions")]
         public async Task<IActionResult> GetWalletTransaction()
         {
-            var transactions = await _wallet.GetWalletTransactionsAsync(CurrentUserId);
+            var transactions = await _wallet.GetMyTransactionsAsync();
             return ApiOk(transactions);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateWallet()
-        {
-            await _wallet.CreateWalletAsync(CurrentUserId);
-            return ApiOk();
         }
 
         [HttpPost("transactions/deposit")]
         public async Task<IActionResult> Deposit([FromBody] int amount)
         {
-            var transaction = await _wallet.DepositAsync(CurrentUserId, amount);
+            var transaction = await _wallet.DepositAsync(amount);
             return ApiOk(transaction);
         }
 
         [HttpPost("transactions/withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] int amount)
         {
-            var transaction = await _wallet.WithdrawAsync(CurrentUserId, amount);
+            var transaction = await _wallet.WithdrawAsync(amount);
             return ApiOk(transaction);
         }
     }

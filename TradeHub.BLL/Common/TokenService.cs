@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using TradeHub.BLL.Configurations;
 using TradeHub.BLL.DTOs.Auths;
 
-namespace TradeHub.BLL.Services
+namespace TradeHub.BLL.Common
 {
     public class TokenService
     {

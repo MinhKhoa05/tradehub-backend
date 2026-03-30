@@ -1,6 +1,6 @@
 ﻿using TradeHub.BLL.Exceptions;
 
-namespace TradeHub.BLL.Services
+namespace TradeHub.BLL.Common
 {
     public class PasswordService
     {        

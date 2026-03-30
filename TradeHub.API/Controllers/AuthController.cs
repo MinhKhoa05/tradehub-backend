@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using TradeHub.BLL.Mappings;
 using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.ApplicationServices;
@@ -33,18 +32,10 @@ namespace TradeHub.API.Controllers
         }
 
         [Authorize]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetMe()
-        {
-            var user = await _auth.GetCurrentUserAsync(CurrentUserId);
-            return ApiOk(user.ToResponse());
-        }
-        
-        [Authorize]
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword(PasswordChangeRequest passwordChangeRequest)
         {
-            await _auth.ChangePasswordAsync(CurrentUserId, passwordChangeRequest);
+            await _auth.ChangePasswordAsync(passwordChangeRequest);
             return ApiNoContent();
         }
     }
