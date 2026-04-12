@@ -13,9 +13,23 @@ using TradeHub.DAL.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services.AddControllers();
+// ================= CORS CONFIGURATION =================
+// Lấy giá trị từ biến môi trường "AllowedOrigins" truyền từ Docker
+var originFromConfig = builder.Configuration["AllowedOrigins"];
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp",
+        policy =>
+        {
+            policy.WithOrigins(originFromConfig ?? "http://localhost:3000")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
+
+// Add services to the container
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
@@ -27,7 +41,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new() { Title = "TradeHub API", Version = "v1" });
@@ -58,68 +71,53 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
 // Bind JwtSettings
 builder.Services.Configure<JwtSettings>(
     builder.Configuration.GetSection("Jwt"));
 
-
 // JWT Authentication
 builder.Services.AddJwtAuthentication(builder.Configuration);
 
-
 // ================= DATABASE =================
-
 builder.Services.AddScoped<DatabaseContext>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
+    // Lấy chuỗi kết nối từ key "Default" (khớp với ConnectionStrings__Default trong Docker)
     var connectionString = config.GetConnectionString("Default");
     return new DatabaseContext(connectionString!);
 });
 
-
 // ================= REPOSITORIES =================
-
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<CartItemRepository>();
-
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<OrderItemRepository>();
 builder.Services.AddScoped<OrderHistoryRepository>();
-
 builder.Services.AddScoped<WalletRepository>();
 builder.Services.AddScoped<WalletTransactionRepository>();
 
 // ================= QUERIES =================
-
 builder.Services.AddScoped<CartItemQuery>();
 
-
 // ================= SERVICES =================
-
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<WalletService>();
 
-
 // ================= APPLICATION SERVICES =================
-
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OrderUsecase>();
 
-
 // ================= COMMON SERVICES =================
 builder.Services.AddHttpContextAccessor();
-
 builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<PasswordService>();
 
 var app = builder.Build();
-
 
 // ================= MIDDLEWARE =================
 
@@ -129,7 +127,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Kích hoạt CORS trước khi Auth và MapControllers
+app.UseCors("AllowReactApp");
+
+// Tắt HttpsRedirection để tránh lỗi SSL khi chạy Docker local với React
+// app.UseHttpsRedirection();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 

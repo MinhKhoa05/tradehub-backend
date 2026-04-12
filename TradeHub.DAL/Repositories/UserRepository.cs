@@ -36,7 +36,7 @@ namespace TradeHub.DAL.Repositories
 
         public async Task<int> UpdateAsync(User user)
         {
-            string sql = @"UPDATE users SET name = @Name, email = @Email
+            string sql = @"UPDATE users SET name = @Name, email = @Email, phone = @Phone, avatar_url = @AvatarUrl, address = @Address
                     WHERE id = @Id";
             return await _database.SqlExecuteAsync(sql, user);
         }

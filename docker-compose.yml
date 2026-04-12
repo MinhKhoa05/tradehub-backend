@@ -1,4 +1,4 @@
-version: "3.9"
+﻿version: "3.9"
 
 services:
   api:
@@ -6,10 +6,13 @@ services:
       context: .
     container_name: tradehub_api
     ports:
-      - "5000:8080"
+      - "5000:8080" # Gọi từ ngoài qua port 5000
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=server=db;port=3306;database=tradehub_db;user=root;password=123456
+      # Map chính xác vào GetConnectionString("Default")
+      - ConnectionStrings__Default=server=db;port=3306;database=tradehub_db;user=root;password=123456
+      # Truyền URL của React vào để config CORS linh hoạt
+      - AllowedOrigins=http://localhost:3000
     depends_on:
       db:
         condition: service_healthy
