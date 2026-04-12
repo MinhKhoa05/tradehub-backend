@@ -1,11 +1,15 @@
-﻿namespace TradeHub.DAL.Entities
+﻿using Dapper.Contrib.Extensions;
+
+namespace TradeHub.DAL.Entities
 {
+    [Table("orders")]
     public class Order
     {
-        public int Id { get; set; }
+        [Key]
+        public long Id { get; set; }
 
-        public int BuyerId { get; set; }
-        public int SellerId { get; set; }
+        public long BuyerId { get; set; }
+        public long SellerId { get; set; }
 
         public int TotalAmount { get; set; }
 

@@ -9,7 +9,7 @@
             _database = database;
         }
 
-        public async Task<List<CartDetailDTO>> GetCartDetailDTOsAsync(int userId)
+        public async Task<List<CartDetailDTO>> GetCartDetailDTOsAsync(long userId)
         {
             var sql = @"
                     SELECT
@@ -24,7 +24,7 @@
                     WHERE c.user_id = @UserId
                 ";
 
-            return await _database.QueryListAsync<CartDetailDTO>(sql, new { UserId = userId });
+            return await _database.SqlQueryAsync<CartDetailDTO>(sql, new { UserId = userId });
         }
     }
 

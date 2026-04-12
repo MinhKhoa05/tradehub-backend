@@ -11,38 +11,34 @@ namespace TradeHub.DAL.Repositories
             _database = database;
         }
 
-        public async Task<User?> GetByIdAsync(int userId)
+        public async Task<User?> GetByIdAsync(long userId)
         {
             string sql = "SELECT * FROM users WHERE id = @UserId";
-            return await _database.QuerySingleAsync<User>(sql, new { UserId = userId });
+            return await _database.SqlFirstAsync<User>(sql, new { UserId = userId });
         }
 
         public async Task<User?> GetByEmailAsync(string email)
         {
             string sql = "SELECT * FROM users WHERE email = @Email";
-            return await _database.QuerySingleAsync<User>(sql, new { Email = email });
+            return await _database.SqlFirstAsync<User>(sql, new { Email = email });
         }
 
-        public async Task<int> CreateAsync(User user)
+        public async Task<long> CreateAsync(User user)
         {
-            string sql = @"
-                INSERT INTO users (name, email, password_hash)
-                VALUES (@Name, @Email, @PasswordHash)";
-
-            return await _database.ExecuteInsertAsync(sql, user);
+            return await _database.InsertAsync(user);
         }
 
-        public async Task<int> UpdatePasswordAsync(int userId, string newPasswordHash)
+        public async Task<int> UpdatePasswordAsync(long userId, string newPasswordHash)
         {
             string sql = "UPDATE users SET password_hash = @PasswordHash WHERE id = @UserId";
-            return await _database.ExecuteAsync(sql, new { PasswordHash = newPasswordHash, UserId = userId });
+            return await _database.SqlExecuteAsync(sql, new { PasswordHash = newPasswordHash, UserId = userId });
         }
 
         public async Task<int> UpdateAsync(User user)
         {
             string sql = @"UPDATE users SET name = @Name, email = @Email
                     WHERE id = @Id";
-            return await _database.ExecuteAsync(sql, user);
+            return await _database.SqlExecuteAsync(sql, user);
         }
     }
 }

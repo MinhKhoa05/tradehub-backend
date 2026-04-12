@@ -11,64 +11,62 @@ namespace TradeHub.DAL.Repositories
             _database = database;
         }
 
-        public async Task<Order?> GetByIdAsync(int orderId)
+        public async Task<Order?> GetByIdAsync(long orderId)
         {
             var sql = "SELECT * FROM orders WHERE id = @Id";
-            return await _database.QuerySingleAsync<Order>(sql, new { Id = orderId });
+            return await _database.SqlFirstAsync<Order>(sql, new { Id = orderId });
         }
 
-        public async  Task<List<Order>> GetAllByUserId(int userId, OrderStatus? status = null)
+        public async Task<List<Order>> GetAllByUserId(long userId, OrderStatus? status = null)
         {
             var sql = @"SELECT * FROM orders
                         WHERE (seller_id = @UserId OR buyer_id = @UserId)
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
+            return await _database.SqlQueryAsync<Order>(sql, new { UserId = userId, Status = status });
         }
 
-        public async Task<List<Order>> GetSellerOrdersAsync(int userId, OrderStatus? status = null)
+        public async Task<List<Order>> GetSellerOrdersAsync(long userId, OrderStatus? status = null)
         {
             var sql = @"SELECT * FROM orders
                         WHERE seller_id = @UserId
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
+            return await _database.SqlQueryAsync<Order>(sql, new { UserId = userId, Status = status });
         }
 
-        public async Task<bool> IsOrderBelongsToUserAsync(int userId, int orderId)
+        public async Task<bool> IsOrderBelongsToUserAsync(long userId, long orderId)
         {
             var sql = @"
-                SELECT 1
-                FROM orders
-                WHERE id = @OrderId
-                  AND (buyer_id = @UserId OR seller_id = @UserId)
-                LIMIT 1";
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM orders
+                    WHERE id = @OrderId
+                        AND (buyer_id = @UserId OR seller_id = @UserId)
+                );
+            ";
 
-            var result = await _database.ExecuteScalarAsync<int?>(sql, new { UserId = userId, OrderId = orderId });
-
-            return result.HasValue;
+            return await _database.SqlScalarAsync<bool>(sql, new { UserId = userId, OrderId = orderId });
         }
 
-        public async Task<List<Order>> GetBuyerOrdersAsync(int userId, OrderStatus? status = null)
+        public async Task<List<Order>> GetBuyerOrdersAsync(long userId, OrderStatus? status = null)
         {
             var sql = @"SELECT * FROM orders
                         WHERE buyer_id = @UserId
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryListAsync<Order>(sql, new { UserId = userId, Status = status });
+            return await _database.SqlQueryAsync<Order>(sql, new { UserId = userId, Status = status });
         }
 
-        public async Task<int> CreateAsync(Order order)
+        public async Task<long> CreateAsync(Order order)
         {
-            var sql = @"INSERT INTO orders (buyer_id, seller_id, total_amount, payment_method, status)
-                        VALUES (@BuyerId, @SellerId, @TotalAmount, @PaymentMethod, @Status)";
-            return await _database.ExecuteInsertAsync(sql, order);
+            return await _database.InsertAsync(order);
         }
 
-        public async Task<int> UpdateStatusAsync(int orderId, OrderStatus newStatus)
+        public async Task<int> UpdateStatusAsync(long orderId, OrderStatus newStatus)
         {
             var sql = "UPDATE orders SET status = @Status, updated_at = CURRENT_TIMESTAMP WHERE id = @Id";
-            return await _database.ExecuteAsync(sql, new { Id = orderId, Status = newStatus });
+            return await _database.SqlExecuteAsync(sql, new { Id = orderId, Status = newStatus });
         }
     }
 }

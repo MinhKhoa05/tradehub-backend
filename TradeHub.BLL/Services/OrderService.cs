@@ -51,14 +51,14 @@ namespace TradeHub.BLL.Services
 
         // ===== ACTIONS (Thao tác nghiệp vụ - Bỏ 'My') =====
 
-        public async Task<List<int>> CreateOrdersAsync(CheckoutRequest request)
+        public async Task<List<long>> CreateOrdersAsync(CheckoutRequest request)
         {
             if (request.Items == null || !request.Items.Any())
                 throw new BusinessException("Đơn hàng phải có ít nhất 1 sản phẩm.");
 
             // Gom nhóm sản phẩm theo người bán để tách thành các đơn hàng riêng biệt
             var groups = request.Items.GroupBy(x => x.SellerId);
-            var orderIds = new List<int>();
+            var orderIds = new List<long>();
 
             foreach (var group in groups)
             {
@@ -107,7 +107,7 @@ namespace TradeHub.BLL.Services
 
         // ================= INTERNAL / PRIVATE (Hậu tố Internal & Ensure) =================
 
-        private async Task EnsureOrderBelongsToMeAsync(int orderId)
+        private async Task EnsureOrderBelongsToMeAsync(long orderId)
         {
             // Kiểm tra xem User hiện tại có phải Buyer hoặc Seller của đơn này không
             var isBelong = await _orderRepo.IsOrderBelongsToUserAsync(CurrentUserId, orderId);
@@ -116,7 +116,7 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Bạn không có quyền truy cập vào đơn hàng này.");
         }
 
-        private async Task<int> CreateOrderInternalAsync(
+        private async Task<long> CreateOrderInternalAsync(
             int sellerId,
             PaymentMethod paymentMethod,
             List<CheckoutItem> items)
@@ -139,7 +139,7 @@ namespace TradeHub.BLL.Services
             return orderId;
         }
 
-        private async Task CreateOrderItemsInternalAsync(int orderId, List<CheckoutItem> items)
+        private async Task CreateOrderItemsInternalAsync(long orderId, List<CheckoutItem> items)
         {
             var orderItems = items.Select(x => new OrderItem
             {
@@ -152,7 +152,7 @@ namespace TradeHub.BLL.Services
             await _orderItemRepo.CreateRangeAsync(orderItems);
         }
 
-        private async Task CreateInitialHistoryInternalAsync(int orderId)
+        private async Task CreateInitialHistoryInternalAsync(long orderId)
         {
             await _orderHistoryRepo.CreateAsync(new OrderHistory
             {

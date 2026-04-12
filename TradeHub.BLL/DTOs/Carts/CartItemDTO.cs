@@ -2,9 +2,9 @@
 {
     public class CartItemDTO
     {
-        public int Id { get; set; }
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
+        public long Id { get; set; }
+        public long ProductId { get; set; }
+        public long Quantity { get; set; }
 
         public CartProductDTO? Product { get; set; }
     }

@@ -1,9 +1,13 @@
-﻿namespace TradeHub.DAL.Entities
+﻿using Dapper.Contrib.Extensions;
+
+namespace TradeHub.DAL.Entities
 {
+    [Table("wallet_transactions")]
     public class WalletTransaction
     {
-        public int Id { get; set; }
-        public int WalletId { get; set; }
+        [Key]
+        public long Id { get; set; }
+        public long WalletId { get; set; }
 
         // > 0: Tiền vào;   < 0 tiền ra
         public int Amount { get; set; }

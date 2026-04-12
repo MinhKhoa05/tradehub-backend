@@ -12,7 +12,7 @@ namespace TradeHub.API
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public int? UserId
+        public long? UserId
         {
             get
             {
@@ -20,7 +20,7 @@ namespace TradeHub.API
                 var userIdClaim = _httpContextAccessor.HttpContext?.User?
                     .FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-                return int.TryParse(userIdClaim, out var id) ? id : null;
+                return long.TryParse(userIdClaim, out var id) ? id : null;
             }
         }
     }

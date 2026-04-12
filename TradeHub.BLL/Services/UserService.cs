@@ -18,7 +18,7 @@ namespace TradeHub.BLL.Services
 
         // ===== PUBLIC / AUTH (Đăng ký & Tìm kiếm chung) =====
 
-        public async Task<int> RegisterAsync(CreateUserRequest request) // Bỏ User vì đã ở trong UserService
+        public async Task<long> RegisterAsync(CreateUserRequest request) // Bỏ User vì đã ở trong UserService
         {
             var existingUser = await _userRepo.GetByEmailAsync(request.Email);
 
@@ -54,7 +54,7 @@ namespace TradeHub.BLL.Services
         }
 
         // ===== INTERNAL (Xử lý nội bộ) =====
-        private async Task<User> GetByIdInternalAsync(int userId)
+        private async Task<User> GetByIdInternalAsync(long userId)
         {
             return await _userRepo.GetByIdAsync(userId)
                 ?? throw new BusinessException("Người dùng không tồn tại trong hệ thống.");

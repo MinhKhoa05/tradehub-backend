@@ -16,7 +16,7 @@ namespace TradeHub.BLL.Services
         /// Lấy UserId của người dùng hiện tại. 
         /// Nếu chưa đăng nhập (UserId null), văng lỗi Unauthorized ngay lập tức.
         /// </summary>
-        protected int CurrentUserId => _identityService.UserId
+        protected long CurrentUserId => _identityService.UserId
             ?? throw new AuthenticationException("Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
 
         /// <summary>

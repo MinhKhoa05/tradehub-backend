@@ -12,38 +12,27 @@ namespace TradeHub.DAL.Repositories
             _database = database;
         }
 
-        public async Task<int> CreateAsync(Product product)
+        public async Task<long> CreateAsync(Product product)
         {
-            var sql = @"INSERT INTO products (name, normalized_name, description, price, stock, seller_id)
-                    VALUES (@Name, @NormalizedName, @Description, @Price, @Stock, @SellerId)";
-            return await _database.ExecuteInsertAsync(sql, product);
+            return await _database.InsertAsync(product);
         }
 
         public async Task<Product?> GetByIdAsync(int id)
         {
             var sql = "SELECT * FROM products WHERE id = @Id";
-            return await _database.QuerySingleAsync<Product>(sql, new { Id = id });
-        }
-
-        public async Task<List<Product>> GetByIdsAsync(IEnumerable<int> ids)
-        {
-            if (ids == null || !ids.Any())
-                return new List<Product>();
-            
-            var sql = "SELECT * FROM products WHERE id IN @Ids";
-            return await _database.QueryListAsync<Product>(sql, new { Ids = ids });
+            return await _database.SqlFirstAsync<Product>(sql, new { Id = id });
         }
 
         public async Task<List<Product>> GetAllAsync()
         {
             var sql = "SELECT * FROM products";
-            return await _database.QueryListAsync<Product>(sql);
+            return await _database.SqlQueryAsync<Product>(sql);
         }
 
-        public async Task<List<Product>> GetBySellerAsync(int sellerId)
+        public async Task<List<Product>> GetBySellerAsync(long sellerId)
         {
             var sql = "SELECT * FROM products WHERE seller_id = @SellerId";
-            return await _database.QueryListAsync<Product>(sql, new { SellerId = sellerId });
+            return await _database.SqlQueryAsync<Product>(sql, new { SellerId = sellerId });
         }
 
         public async Task<int> UpdateAsync(int productId, Product product)
@@ -55,7 +44,7 @@ namespace TradeHub.DAL.Repositories
                     description = @Description
                 WHERE id = @Id";
 
-            return await _database.ExecuteAsync(sql, new
+            return await _database.SqlExecuteAsync(sql, new
             {
                 Id = productId,
                 product.Name,
@@ -67,25 +56,25 @@ namespace TradeHub.DAL.Repositories
         public async Task<int> UpdatePriceAsync(int productId, int price)
         {
             var sql = "UPDATE products SET price = @Price WHERE id = @Id";
-            return await _database.ExecuteAsync(sql, new { Price = price, Id = productId });
+            return await _database.SqlExecuteAsync(sql, new { Price = price, Id = productId });
         }
 
         public async Task<int> IncreaseStockAsync(int productId, int quantity)
         {
             var sql = "UPDATE products SET stock = stock + @Quantity WHERE id = @Id";
-            return await _database.ExecuteAsync(sql, new {  Quantity = quantity, Id = productId });
+            return await _database.SqlExecuteAsync(sql, new {  Quantity = quantity, Id = productId });
         }
 
         public async Task<int> DecreaseStockAsync(int productId, int quantity)
         {
             var sql = "UPDATE products SET stock = stock - @Quantity WHERE id = @Id AND stock >= @Quantity";
-            return await _database.ExecuteAsync(sql, new { Quantity = quantity,Id = productId });
+            return await _database.SqlExecuteAsync(sql, new { Quantity = quantity,Id = productId });
         }
 
         public async Task<int> DecreaseStockRangeAsync(List<ProductStockUpdate> products)
         {
             var sql = "UPDATE products SET stock = stock - @Quantity WHERE id = @Id AND stock >= @Quantity";
-            return await _database.ExecuteAsync(sql, products);
+            return await _database.SqlExecuteAsync(sql, products);
         }
 
         public async Task<List<Product>> SearchByNameAsync(string normalizedName, int page, int pageSize)
@@ -98,7 +87,7 @@ namespace TradeHub.DAL.Repositories
                 LIMIT @PageSize OFFSET @Offset
             ";
 
-            return await _database.QueryListAsync<Product>(sql, new
+            return await _database.SqlQueryAsync<Product>(sql, new
             {
                 SearchPattern = $"%{normalizedName}%",
                 Offset = (page - 1) * pageSize,

@@ -11,29 +11,27 @@ namespace TradeHub.DAL.Repositories
             _database = database;
         }
 
-        public async Task<int> CreateAsync(Wallet wallet)
+        public async Task<long> CreateAsync(Wallet wallet)
         {
-            var sql = @"INSERT INTO wallets (user_id, balance)
-                        VALUES (@UserId, @Balance)";
-            return await _database.ExecuteInsertAsync(sql, wallet);
+            return await _database.InsertAsync(wallet);
         }
 
-        public async Task<Wallet?> GetByUserIdAsync(int userId)
+        public async Task<Wallet?> GetByUserIdAsync(long userId)
         {
             var sql = "SELECT * FROM wallets WHERE user_id = @UserId";
-            return await _database.QuerySingleAsync<Wallet>(sql, new { UserId = userId });
+            return await _database.SqlFirstAsync<Wallet>(sql, new { UserId = userId });
         }
 
-        public async Task<int> IncreaseBalanceAsync(int userId, int amount)
+        public async Task<int> IncreaseBalanceAsync(long userId, int amount)
         {
             var sql = "UPDATE wallets SET balance = balance + @Amount WHERE user_id = @UserId";
-            return await _database.ExecuteAsync(sql, new { UserId = userId, Amount = amount });
+            return await _database.SqlExecuteAsync(sql, new { UserId = userId, Amount = amount });
         }
 
-        public async Task<int> DecreaseBalanceAsync(int userId, int amount)
+        public async Task<int> DecreaseBalanceAsync(long userId, int amount)
         {
             var sql = "UPDATE wallets SET balance = balance - @Amount WHERE user_id = @UserId AND balance >= @Amount";
-            return await _database.ExecuteAsync(sql, new { UserId = userId, Amount = amount });
+            return await _database.SqlExecuteAsync(sql, new { UserId = userId, Amount = amount });
         }
     }
 }

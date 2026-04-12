@@ -1,14 +1,15 @@
 ﻿using System.Data;
-using Dapper;
 using MySqlConnector;
+using Dapper;
+using SqlKata.Compilers;
 
 namespace TradeHub.DAL
 {
     public class DatabaseContext : IAsyncDisposable
     {
-
         private readonly MySqlConnection _connection;
         private MySqlTransaction? _transaction;
+        private static readonly Compiler _compiler = new MySqlCompiler();
 
         static DatabaseContext()
         {
@@ -20,50 +21,48 @@ namespace TradeHub.DAL
             _connection = new MySqlConnection(connectionString);
         }
 
-        #region Connection
+        public Compiler Compiler => _compiler;
+        public MySqlConnection Connection => _connection;
+        public MySqlTransaction? Transaction => _transaction;
 
-        public async Task OpenAsync()
+        public bool HasActiveTransaction => _transaction?.Connection != null;
+
+        public async Task EnsureOpenAsync()
         {
             if (_connection.State != ConnectionState.Open)
                 await _connection.OpenAsync();
         }
 
-        #endregion
-
-        #region Transaction
+        #region Transaction Handling
 
         public async Task BeginTransactionAsync()
         {
-            await OpenAsync();
+            await EnsureOpenAsync();
             _transaction ??= await _connection.BeginTransactionAsync();
         }
 
         public async Task CommitAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.CommitAsync();
-                await _transaction.DisposeAsync();
-                _transaction = null;
-            }
+            if (_transaction == null) return;
+
+            await _transaction.CommitAsync();
+            await _transaction.DisposeAsync();
+            _transaction = null;
         }
 
         public async Task RollbackAsync()
         {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-                await _transaction.DisposeAsync();
-                _transaction = null;
-            }
+            if (_transaction == null) return;
+
+            await _transaction.RollbackAsync();
+            await _transaction.DisposeAsync();
+            _transaction = null;
         }
 
         public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
         {
             if (_transaction != null)
-            {
                 return await action();
-            }
 
             try
             {
@@ -72,7 +71,6 @@ namespace TradeHub.DAL
                 var result = await action();
 
                 await CommitAsync();
-
                 return result;
             }
             catch
@@ -93,48 +91,10 @@ namespace TradeHub.DAL
 
         #endregion
 
-        #region Dapper Async Helpers
-
-        public async Task<int> ExecuteAsync(string sql, object? param = null)
-        {
-            await OpenAsync();
-            return await _connection.ExecuteAsync(sql, param, _transaction);
-        }
-
-        public async Task<int> ExecuteInsertAsync(string sql, object? param = null)
-        {
-            await OpenAsync();
-            return await _connection.ExecuteScalarAsync<int>(sql + "; SELECT LAST_INSERT_ID();", param, _transaction);
-        }
-
-        public async Task<T?> ExecuteScalarAsync<T>(string sql, object? param = null)
-        {
-            await OpenAsync();
-            return await _connection.ExecuteScalarAsync<T>(sql, param, _transaction);
-        }
-
-        public async Task<T?> QuerySingleAsync<T>(string sql, object? param = null)
-        {
-            await OpenAsync();
-            return await _connection.QuerySingleOrDefaultAsync<T>(sql, param, _transaction);
-        }
-
-        public async Task<List<T>> QueryListAsync<T>(string sql, object? param = null)
-        {
-            await OpenAsync();
-            var result = await _connection.QueryAsync<T>(sql, param, _transaction);
-            return result.AsList();
-        }
-
-        #endregion
-
         public async ValueTask DisposeAsync()
         {
             if (_transaction != null)
-            {
                 await _transaction.DisposeAsync();
-                _transaction = null;
-            }
 
             await _connection.DisposeAsync();
         }

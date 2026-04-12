@@ -14,14 +14,12 @@ namespace TradeHub.DAL.Repositories
         public async Task<List<OrderHistory>> GetByOrderIdAsync(int orderId)
         {
             var sql = "SELECT * FROM order_history WHERE order_id = @OrderId";
-            return await _database.QueryListAsync<OrderHistory>(sql, new { OrderId = orderId });
+            return await _database.SqlQueryAsync<OrderHistory>(sql, new { OrderId = orderId });
         }
 
-        public async Task<int> CreateAsync(OrderHistory history)
+        public async Task<long> CreateAsync(OrderHistory history)
         {
-            var sql = @"INSERT INTO order_history (order_id, from_status, to_status, changed_by, actor_type, note)
-                        VALUES (@OrderId, @FromStatus, @ToStatus, @ChangedBy, @ActorType, @Note)";
-            return await _database.ExecuteInsertAsync(sql, history);
+            return await _database.InsertAsync(history);
         }
     }
 }

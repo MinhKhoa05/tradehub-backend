@@ -1,9 +1,13 @@
-﻿namespace TradeHub.DAL.Entities
+﻿using Dapper.Contrib.Extensions;
+
+namespace TradeHub.DAL.Entities
 {
+    [Table("wallets")]
     public class Wallet
     {
-        public int Id { get; set; }
-        public int UserId { get; set; }
+        [Key]
+        public long Id { get; set; }
+        public long UserId { get; set; }
         public int Balance { get; set; }
 
         public DateTime CreatedAt { get; set; }

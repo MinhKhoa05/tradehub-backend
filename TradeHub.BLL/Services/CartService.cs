@@ -20,12 +20,6 @@ namespace TradeHub.BLL.Services
         }
 
         // ===== READ (Giữ 'My' để khẳng định đây là giỏ hàng riêng tư) =====
-
-        public async Task<List<CartItem>> GetMyItemsAsync() // Bỏ Cart vì đang ở CartService
-        {
-            return await _cartItemRepo.GetByUserIdAsync(CurrentUserId);
-        }
-
         public async Task<List<CartDetailDTO>> GetMyDetailsAsync()
         {
             return await _cartItemQuery.GetCartDetailDTOsAsync(CurrentUserId);

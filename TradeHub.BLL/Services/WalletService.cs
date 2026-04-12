@@ -40,7 +40,7 @@ namespace TradeHub.BLL.Services
         }
 
         // ===== ACTIONS (Thao tác nghiệp vụ thuần túy) =====
-
+        
         public async Task EnsureBalanceIsEnoughAsync(int requiredAmount)
         {
             var balance = await GetMyBalanceAsync();
@@ -72,7 +72,7 @@ namespace TradeHub.BLL.Services
             return await ProcessTransactionInternalAsync(amount, info);
         }
 
-        public async Task<WalletTransaction> PayForOrdersAsync(List<int> orderIds, int totalAmount)
+        public async Task<WalletTransaction> PayForOrdersAsync(List<long> orderIds, int totalAmount)
         {
             if (orderIds == null || !orderIds.Any())
                 throw new BusinessException("Không có đơn hàng nào để thanh toán.");

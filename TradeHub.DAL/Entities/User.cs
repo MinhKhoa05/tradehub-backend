@@ -1,21 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Dapper.Contrib.Extensions;
 
 namespace TradeHub.DAL.Entities
 {
+    [Table("users")]
     public class User
     {
-        [Required]
-        public int Id { get; set; }
-
-        [Required]
-        [MaxLength(50)]
+        [Key]
+        public long Id { get; set; }
         public string Name { get; set; } = null!;
-
-        [Required]
-        [MaxLength(255)]
         public string Email { get; set; }
-        
-        [Required]
         public string PasswordHash { get; set; }
     }
 }
