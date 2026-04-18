@@ -1,8 +1,10 @@
-﻿using TradeHub.DAL.Entities;
+using TradeHub.DAL.Entities;
+
+using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {
-    public class OrderHistoryRepository
+    public class OrderHistoryRepository : IOrderHistoryRepository
     {
         private readonly DatabaseContext _database;
 

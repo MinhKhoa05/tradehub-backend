@@ -1,5 +1,5 @@
 ﻿using Dapper;
-using Dapper.Contrib.Extensions;
+using Dommel;
 using SqlKata;
 
 namespace TradeHub.DAL
@@ -36,7 +36,8 @@ namespace TradeHub.DAL
         public static async Task<long> InsertAsync<T>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
-            return await db.Connection.InsertAsync(entity, db.Transaction);
+            var id = await db.Connection.InsertAsync(entity, db.Transaction);
+            return Convert.ToInt64(id);
         }
 
         /// <summary>

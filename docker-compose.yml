@@ -28,8 +28,8 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./Database/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./Database/02_seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ./Database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./Database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456"]
       interval: 5s

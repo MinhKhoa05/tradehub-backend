@@ -1,21 +1,22 @@
-﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Orders;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories;
+using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.BLL.Services
 {
     public class OrderService : BaseService
     {
-        private readonly OrderRepository _orderRepo;
-        private readonly OrderItemRepository _orderItemRepo;
-        private readonly OrderHistoryRepository _orderHistoryRepo;
+        private readonly IOrderRepository _orderRepo;
+        private readonly IOrderItemRepository _orderItemRepo;
+        private readonly IOrderHistoryRepository _orderHistoryRepo;
         private readonly DatabaseContext _database;
 
-        public OrderService(OrderRepository orderRepo, OrderItemRepository orderItemRepo,
-                OrderHistoryRepository orderHistoryRepo, DatabaseContext database, IIdentityService identityService)
+        public OrderService(IOrderRepository orderRepo, IOrderItemRepository orderItemRepo,
+                IOrderHistoryRepository orderHistoryRepo, DatabaseContext database, IIdentityService identityService)
             : base(identityService)
         {
             _orderRepo = orderRepo;

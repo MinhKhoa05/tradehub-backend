@@ -1,21 +1,22 @@
-﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Wallets;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories;
+using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.BLL.Services
 {
     public class WalletService : BaseService
     {
-        private readonly WalletRepository _walletRepo;
-        private readonly WalletTransactionRepository _walletTxRepo;
+        private readonly IWalletRepository _walletRepo;
+        private readonly IWalletTransactionRepository _walletTxRepo;
         private readonly DatabaseContext _database;
 
         public WalletService(
-            WalletRepository walletRepo,
-            WalletTransactionRepository walletTxRepo,
+            IWalletRepository walletRepo,
+            IWalletTransactionRepository walletTxRepo,
             DatabaseContext database,
             IIdentityService identityService)
             : base(identityService)
@@ -33,7 +34,7 @@ namespace TradeHub.BLL.Services
             return await _walletTxRepo.GetByWalletIdAsync(wallet.Id);
         }
 
-        public async Task<int> GetMyBalanceAsync()
+        public async Task<long> GetMyBalanceAsync()
         {
             var wallet = await GetOrCreateWalletInternalAsync();
             return wallet.Balance;
@@ -41,7 +42,7 @@ namespace TradeHub.BLL.Services
 
         // ===== ACTIONS (Thao tác nghiệp vụ thuần túy) =====
         
-        public async Task EnsureBalanceIsEnoughAsync(int requiredAmount)
+        public async Task EnsureBalanceIsEnoughAsync(long requiredAmount)
         {
             var balance = await GetMyBalanceAsync();
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using TradeHub.API;
 using TradeHub.API.Extensions;
 using TradeHub.API.Filters;
@@ -10,6 +10,7 @@ using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Queries;
 using TradeHub.DAL.Repositories;
+using TradeHub.DAL.Repositories.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -91,11 +92,11 @@ builder.Services.AddScoped<DatabaseContext>(sp =>
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<CartItemRepository>();
-builder.Services.AddScoped<OrderRepository>();
-builder.Services.AddScoped<OrderItemRepository>();
-builder.Services.AddScoped<OrderHistoryRepository>();
-builder.Services.AddScoped<WalletRepository>();
-builder.Services.AddScoped<WalletTransactionRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
+builder.Services.AddScoped<IOrderHistoryRepository, OrderHistoryRepository>();
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
 
 // ================= QUERIES =================
 builder.Services.AddScoped<CartItemQuery>();

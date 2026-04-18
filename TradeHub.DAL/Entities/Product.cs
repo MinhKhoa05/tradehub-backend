@@ -1,4 +1,5 @@
-﻿using Dapper.Contrib.Extensions;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TradeHub.DAL.Entities
 {
@@ -14,6 +15,6 @@ namespace TradeHub.DAL.Entities
         public int Price { get; set; }
         public int Stock { get; set; } = 0;
         public long SellerId { get; set; }
-
+        public DateTime CreatedAt { get; set; }
     }
 }

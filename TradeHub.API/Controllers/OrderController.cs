@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.Services;
@@ -47,6 +47,13 @@ namespace TradeHub.API.Controllers
         {
             var histories = await _orderService.GetItemsAsync(orderId);
             return ApiOk(histories);
+        }
+
+        [HttpPatch("{orderId}/status")]
+        public async Task<IActionResult> UpdateStatus(int orderId, [FromBody] UpdateOrderStatusRequest request)
+        {
+            await _orderService.UpdateStatusAsync(orderId, request);
+            return ApiOk();
         }
     }
 }

@@ -1,6 +1,7 @@
-﻿using System.Data;
-using MySqlConnector;
+using System.Data;
 using Dapper;
+using Dommel;
+using MySqlConnector;
 using SqlKata.Compilers;
 
 namespace TradeHub.DAL
@@ -13,7 +14,15 @@ namespace TradeHub.DAL
 
         static DatabaseContext()
         {
+            // 1. Dapper Core: Map từ DB lên Object (Chiều đọc)
             DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+            // 2. Helper function: PascalCase to snake_case
+            string ToSnakeCase(string text) =>
+                string.Concat(text.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
+
+            // 3. Dommel: Map Property -> Column (Chiều ghi)
+            DommelMapper.SetColumnNameResolver(new SnakeCaseResolver());
         }
 
         public DatabaseContext(string connectionString)
@@ -25,7 +34,7 @@ namespace TradeHub.DAL
         public MySqlConnection Connection => _connection;
         public MySqlTransaction? Transaction => _transaction;
 
-        public bool HasActiveTransaction => _transaction?.Connection != null;
+        public bool HasActiveTransaction => _transaction != null;
 
         public async Task EnsureOpenAsync()
         {
@@ -35,13 +44,13 @@ namespace TradeHub.DAL
 
         #region Transaction Handling
 
-        public async Task BeginTransactionAsync()
+        private async Task BeginTransactionAsync()
         {
             await EnsureOpenAsync();
             _transaction ??= await _connection.BeginTransactionAsync();
         }
 
-        public async Task CommitAsync()
+        private async Task CommitAsync()
         {
             if (_transaction == null) return;
 
@@ -50,7 +59,7 @@ namespace TradeHub.DAL
             _transaction = null;
         }
 
-        public async Task RollbackAsync()
+        private async Task RollbackAsync()
         {
             if (_transaction == null) return;
 
@@ -59,7 +68,7 @@ namespace TradeHub.DAL
             _transaction = null;
         }
 
-        public async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
+        public virtual async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
         {
             if (_transaction != null)
                 return await action();
@@ -80,7 +89,7 @@ namespace TradeHub.DAL
             }
         }
 
-        public async Task ExecuteInTransactionAsync(Func<Task> action)
+        public virtual async Task ExecuteInTransactionAsync(Func<Task> action)
         {
             await ExecuteInTransactionAsync(async () =>
             {
@@ -97,6 +106,15 @@ namespace TradeHub.DAL
                 await _transaction.DisposeAsync();
 
             await _connection.DisposeAsync();
+        }
+    }
+
+    public class SnakeCaseResolver : IColumnNameResolver
+    {
+        public string ResolveColumnName(System.Reflection.PropertyInfo propertyInfo)
+        {
+            var text = propertyInfo.Name;
+            return string.Concat(text.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
         }
     }
 }

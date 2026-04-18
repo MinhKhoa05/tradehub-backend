@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TradeHub.BLL.Services;
 
@@ -43,5 +43,18 @@ namespace TradeHub.API.Controllers
             var transaction = await _wallet.WithdrawAsync(amount);
             return ApiOk(transaction);
         }
+
+        [HttpPost("pay")]
+        public async Task<IActionResult> Pay([FromBody] PayRequest request)
+        {
+            var transaction = await _wallet.PayForOrdersAsync(request.OrderIds, request.TotalAmount);
+            return ApiOk(transaction);
+        }
+    }
+
+    public class PayRequest
+    {
+        public List<long> OrderIds { get; set; } = new();
+        public int TotalAmount { get; set; }
     }
 }
