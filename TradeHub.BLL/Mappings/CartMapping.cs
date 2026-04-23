@@ -5,7 +5,7 @@ namespace TradeHub.BLL.Mappings
 {
     public static class CartMapping
     {
-        public static CartItemDTO ToCartItemDTO(this CartItem cartItem, Product? product)
+        public static CartItemDTO ToCartItemDTO(this CartItem cartItem, GamePackage? product)
         {
             return new CartItemDTO
             {

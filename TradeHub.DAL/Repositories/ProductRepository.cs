@@ -12,30 +12,30 @@ namespace TradeHub.DAL.Repositories
             _database = database;
         }
 
-        public async Task<long> CreateAsync(Product product)
+        public async Task<long> CreateAsync(GamePackage product)
         {
             return await _database.InsertAsync(product);
         }
 
-        public async Task<Product?> GetByIdAsync(int id)
+        public async Task<GamePackage?> GetByIdAsync(int id)
         {
             var sql = "SELECT * FROM products WHERE id = @Id";
-            return await _database.SqlFirstAsync<Product>(sql, new { Id = id });
+            return await _database.SqlFirstAsync<GamePackage>(sql, new { Id = id });
         }
 
-        public async Task<List<Product>> GetAllAsync()
+        public async Task<List<GamePackage>> GetAllAsync()
         {
             var sql = "SELECT * FROM products";
-            return await _database.SqlQueryAsync<Product>(sql);
+            return await _database.SqlQueryAsync<GamePackage>(sql);
         }
 
-        public async Task<List<Product>> GetBySellerAsync(long sellerId)
+        public async Task<List<GamePackage>> GetBySellerAsync(long sellerId)
         {
             var sql = "SELECT * FROM products WHERE seller_id = @SellerId";
-            return await _database.SqlQueryAsync<Product>(sql, new { SellerId = sellerId });
+            return await _database.SqlQueryAsync<GamePackage>(sql, new { SellerId = sellerId });
         }
 
-        public async Task<int> UpdateAsync(int productId, Product product)
+        public async Task<int> UpdateAsync(int productId, GamePackage product)
         {
             var sql = @"
                 UPDATE Products
@@ -77,7 +77,7 @@ namespace TradeHub.DAL.Repositories
             return await _database.SqlExecuteAsync(sql, products);
         }
 
-        public async Task<List<Product>> SearchByNameAsync(string normalizedName, int page, int pageSize)
+        public async Task<List<GamePackage>> SearchByNameAsync(string normalizedName, int page, int pageSize)
         {
             var sql = @"
                 SELECT *
@@ -87,7 +87,7 @@ namespace TradeHub.DAL.Repositories
                 LIMIT @PageSize OFFSET @Offset
             ";
 
-            return await _database.SqlQueryAsync<Product>(sql, new
+            return await _database.SqlQueryAsync<GamePackage>(sql, new
             {
                 SearchPattern = $"%{normalizedName}%",
                 Offset = (page - 1) * pageSize,

@@ -8,35 +8,27 @@ namespace TradeHub.DAL.Entities
     {
         [Key]
         public long Id { get; set; }
+        
+        public long UserId { get; set; }
+        public string GameAccountInfo { get; set; } = null!;
 
-        public long BuyerId { get; set; }
-        public long SellerId { get; set; }
+        public long WalletTransactionId { get; set; }
 
-        public int TotalAmount { get; set; }
+        public long GamePackageId { get; set; }
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
 
-        public PaymentMethod PaymentMethod { get; set; }
-
+        public decimal Total => UnitPrice * Quantity;
         public OrderStatus Status { get; set; }
-
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
 
     public enum OrderStatus
     {
-        Pending = 1,        // user tạo đơn
-        Confirmed = 2,      // shop xác nhận
-        ReadyForPickup = 3, // hàng sẵn sàng
-        Delivering = 4,     // shipper đã lấy và đang giao
-        Delivered = 5,      // shipper giao xong
-        Completed = 6,      // user xác nhận / auto confirm
-        Cancelled = 7,      // hủy đơn hàng
-        DeliveryFailed = 8  // giao hàng thất bại (shipper)
-    }
-
-    public enum PaymentMethod
-    {
-        Cod = 1,
-        Wallet = 2
+        Pending = 1,        // User đặt hàng
+        Processing = 2,     // Admin đang xử lý
+        Completed = 3,      // Hoàn thành
+        Canacelled = 4      // Hủy đơn
     }
 }

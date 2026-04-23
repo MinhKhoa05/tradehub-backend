@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using TradeHub.API;
 using TradeHub.API.Extensions;
 using TradeHub.API.Filters;

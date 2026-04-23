@@ -31,10 +31,11 @@ services:
       - ./Database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./Database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456"]
-      interval: 5s
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 30s
 
 volumes:
   db_data:

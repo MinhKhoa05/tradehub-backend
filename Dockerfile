@@ -7,6 +7,7 @@ COPY *.sln .
 COPY TradeHub.DAL/*.csproj ./TradeHub.DAL/
 COPY TradeHub.BLL/*.csproj ./TradeHub.BLL/
 COPY TradeHub.API/*.csproj ./TradeHub.API/
+COPY TradeHub.Tests/*.csproj ./TradeHub.Tests/
 RUN dotnet restore
 
 # Copy source code & build

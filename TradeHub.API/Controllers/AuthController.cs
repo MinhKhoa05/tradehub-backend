@@ -31,18 +31,19 @@ namespace TradeHub.API.Controllers
 
             var cookieOptions = new CookieOptions
             {
-                HttpOnly = true,        // Quan trọng nhất: JavaScript không thể đọc được cookie này (Chống XSS)
-                Secure = false,         // Để false vì đang chạy HTTP local (Khi lên Production có HTTPS thì để true)
-                SameSite = SameSiteMode.Lax, // Chống tấn công CSRF
-                Expires = DateTime.UtcNow.AddDays(7) // Thời gian sống của Cookie
+                HttpOnly = true,
+                Secure = false, 
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(7)
             };
 
-            // 3. Ghi Cookie vào Response
-            // Tên cookie ông đặt là gì cũng được, ở đây tui ví dụ là "accessToken"
-            Response.Cookies.Append("accessToken", token, cookieOptions);
+            // Thêm dòng kiểm tra này cho chắc ăn
+            if (!Response.HasStarted)
+            {
+                Response.Cookies.Append("accessToken", token, cookieOptions);
+            }
 
-            // 4. Trả về kết quả (Vẫn trả về token trong body nếu ông muốn React dùng song song)
-            return ApiOk(new { accessToken = token });
+            return Ok(new { accessToken = token }); // Dùng Ok() mặc định để test
         }
 
         [Authorize]

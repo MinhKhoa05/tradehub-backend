@@ -20,12 +20,12 @@ namespace TradeHub.BLL.Services
 
         // ===== PUBLIC (ai cũng dùng được) =====
 
-        public async Task<List<Product>> GetProductsAsync()
+        public async Task<List<GamePackage>> GetProductsAsync()
         {
             return await _productRepo.GetAllAsync();
         }
 
-        public async Task<Product> GetProductByIdOrThrowAsync(int productId)
+        public async Task<GamePackage> GetProductByIdOrThrowAsync(int productId)
         {
             return await _productRepo.GetByIdAsync(productId)
                 ?? throw new BusinessException("Sản phẩm không tồn tại");
@@ -33,14 +33,14 @@ namespace TradeHub.BLL.Services
 
         // ===== MY (seller hiện tại) =====
 
-        public async Task<List<Product>> GetMyProductsAsync()
+        public async Task<List<GamePackage>> GetMyProductsAsync()
         {
             return await _productRepo.GetBySellerAsync(CurrentUserId);
         }
 
-        public async Task<Product> CreateProductAsync(CreateProductRequest request)
+        public async Task<GamePackage> CreateProductAsync(CreateProductRequest request)
         {
-            var product = new Product
+            var product = new GamePackage
             {
                 Name = request.Name,
                 NormalizedName = NormalizeName.Normalize(request.Name),
@@ -54,7 +54,7 @@ namespace TradeHub.BLL.Services
             return product;
         }
 
-        public async Task<Product> UpdateProductAsync(int productId, UpdateProductRequest request)
+        public async Task<GamePackage> UpdateProductAsync(int productId, UpdateProductRequest request)
         {
             if (string.IsNullOrEmpty(request.Name) && request.Description == null)
                 throw new BusinessException("Không có dữ liệu để cập nhật");
@@ -133,7 +133,7 @@ namespace TradeHub.BLL.Services
 
         // ===== PRIVATE =====
 
-        private async Task<Product> GetProductForUpdateAsync(int productId)
+        private async Task<GamePackage> GetProductForUpdateAsync(int productId)
         {
             var product = await GetProductByIdOrThrowAsync(productId);
 

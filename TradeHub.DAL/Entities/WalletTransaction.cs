@@ -8,17 +8,13 @@ namespace TradeHub.DAL.Entities
     {
         [Key]
         public long Id { get; set; }
-        public long WalletId { get; set; }
-
-        // > 0: Tiền vào;   < 0 tiền ra
-        public int Amount { get; set; }
+        public long UserId { get; set; }
+        public decimal Amount { get; set; }
+        public decimal BalanceAfter { get; set; }
         public WalletTransactionType Type { get; set; }
-
-        // Order Id nếu thanh toán đơn hàng ,...
-        public int? ReferenceId { get; set; }
-
         public string? Description { get; set; }
-        public DateTime CreatedAt { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 
     public enum WalletTransactionType

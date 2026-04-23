@@ -30,9 +30,10 @@ namespace TradeHub.BLL.Services
                 Name = request.Name,
                 Email = request.Email,
                 PasswordHash = request.Password, // Lưu ý: Sau này nhớ Hash mật khẩu nhé Khoa
-                Phone = request.Phone,
-                Address = request.Address,
-                AvatarUrl = request.AvatarUrl
+                Phone = "",
+                Address = "",
+                AvatarUrl = "",
+                CreatedAt = DateTime.UtcNow
             };
 
             return await _userRepo.CreateAsync(user);

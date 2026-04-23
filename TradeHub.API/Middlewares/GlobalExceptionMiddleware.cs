@@ -23,6 +23,12 @@ namespace TradeHub.API.Middlewares
             }
             catch (Exception ex)
             {
+                if (context.Response.HasStarted)
+                {
+                    _logger.LogWarning("Response đã bắt đầu gửi về client, không thể can thiệp thêm vào Middleware.");
+                    return;
+                }
+
                 _logger.LogError(ex, ex.Message);
                 await HandleExceptionAsync(context, ex);
             }
@@ -30,6 +36,7 @@ namespace TradeHub.API.Middlewares
 
         private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
+            // Chỉ set khi chưa bắt đầu gửi response, tránh lỗi "Headers already sent"
             context.Response.ContentType = "application/json";
 
             var statusCode = ex switch

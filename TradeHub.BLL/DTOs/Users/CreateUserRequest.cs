@@ -16,8 +16,8 @@ namespace TradeHub.BLL.DTOs.Users
         [MinLength(8, ErrorMessage = "Mật khẩu phải ít nhất 8 ký tự")]
         public string Password { get; set; } = null!;
 
-        public string Phone { get; set; } = null!;
-        public string Address { get; set; } = null!;
-        public string AvatarUrl { get; set; } = null!;
+        // public string Phone { get; set; } = null!;
+        // public string Address { get; set; } = null!;
+        // public string AvatarUrl { get; set; } = null!;
     }
 }

@@ -9,7 +9,7 @@ namespace TradeHub.DAL.Entities
         [Key]
         public long Id { get; set; }
         public long UserId { get; set; }
-        public long ProductId { get; set; }
+        public long GamePackageId { get; set; }
         public int Quantity { get; set; }
     }
 }
