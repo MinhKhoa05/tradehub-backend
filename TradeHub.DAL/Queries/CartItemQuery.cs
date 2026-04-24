@@ -24,7 +24,7 @@
                     WHERE c.user_id = @UserId
                 ";
 
-            return await _database.SqlQueryAsync<CartDetailDTO>(sql, new { UserId = userId });
+            return await _database.QueryAsync<CartDetailDTO>(sql, new { UserId = userId });
         }
     }
 

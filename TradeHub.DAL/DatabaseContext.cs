@@ -2,7 +2,6 @@ using System.Data;
 using Dapper;
 using Dommel;
 using MySqlConnector;
-using SqlKata.Compilers;
 
 namespace TradeHub.DAL
 {
@@ -10,18 +9,13 @@ namespace TradeHub.DAL
     {
         private readonly MySqlConnection _connection;
         private MySqlTransaction? _transaction;
-        private static readonly Compiler _compiler = new MySqlCompiler();
 
         static DatabaseContext()
         {
             // 1. Dapper Core: Map từ DB lên Object (Chiều đọc)
             DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-            // 2. Helper function: PascalCase to snake_case
-            string ToSnakeCase(string text) =>
-                string.Concat(text.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
-
-            // 3. Dommel: Map Property -> Column (Chiều ghi)
+            // 2. Dommel: Map Property -> Column (Chiều ghi)
             DommelMapper.SetColumnNameResolver(new SnakeCaseResolver());
         }
 
@@ -30,7 +24,6 @@ namespace TradeHub.DAL
             _connection = new MySqlConnection(connectionString);
         }
 
-        public Compiler Compiler => _compiler;
         public MySqlConnection Connection => _connection;
         public MySqlTransaction? Transaction => _transaction;
 
