@@ -7,7 +7,7 @@ namespace TradeHub.API.Controllers
 {
     [Route("api/game-packages")]
     [ApiController]
-    public class GamePackageController : BaseController
+    public class GamePackageController : ApiControllerBase
     {
         private readonly GamePackageService _packageService;
 
@@ -37,12 +37,16 @@ namespace TradeHub.API.Controllers
             return ApiOk(package);
         }
 
+        /// <summary>
+        /// Tạo gói nạp game mới. Ràng buộc Role Admin để đảm bảo chỉ nhân sự quản lý 
+        /// mới có thể thay đổi cấu hình giá và sản phẩm.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreatePackage([FromBody] CreateGamePackageRequest request)
         {
             var package = await _packageService.CreatePackageAsync(request);
-            return ApiCreated(package, "Tạo Game Package thành công");
+            return ApiCreated(package, "Tạo gói nạp thành công.");
         }
 
         [Authorize(Roles = "Admin")]
@@ -50,7 +54,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> UpdatePackage(long id, [FromBody] UpdateGamePackageRequest request)
         {
             var package = await _packageService.UpdatePackageAsync(id, request);
-            return ApiOk(package, "Cập nhật Game Package thành công");
+            return ApiOk(package, "Cập nhật thông tin gói nạp thành công.");
         }
 
         [Authorize(Roles = "Admin")]
@@ -58,7 +62,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> DeletePackage(long id)
         {
             await _packageService.DeletePackageAsync(id);
-            return ApiOk(null, "Xóa Game Package thành công");
+            return ApiOk(null, "Xóa gói nạp thành công.");
         }
     }
 }

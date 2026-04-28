@@ -7,7 +7,7 @@ namespace TradeHub.API.Controllers
 {
     [Route("api/games")]
     [ApiController]
-    public class GameController : BaseController
+    public class GameController : ApiControllerBase
     {
         private readonly GameService _gameService;
 
@@ -30,12 +30,16 @@ namespace TradeHub.API.Controllers
             return ApiOk(game);
         }
 
+        /// <summary>
+        /// Chỉ quản trị viên mới có quyền tạo mới danh mục Game.
+        /// Việc tách quyền (Authorization) ngay tại Controller giúp bảo vệ hệ thống từ sớm.
+        /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateGame([FromBody] CreateGameRequest request)
         {
             var game = await _gameService.CreateGameAsync(request);
-            return ApiCreated(game, "Tạo Game thành công");
+            return ApiCreated(game, "Tạo Game mới thành công.");
         }
 
         [Authorize(Roles = "Admin")]
@@ -43,7 +47,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> UpdateGame(long id, [FromBody] UpdateGameRequest request)
         {
             var game = await _gameService.UpdateGameAsync(id, request);
-            return ApiOk(game, "Cập nhật Game thành công");
+            return ApiOk(game, "Cập nhật thông tin Game thành công.");
         }
 
         [Authorize(Roles = "Admin")]
@@ -51,7 +55,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> DeleteGame(long id)
         {
             await _gameService.DeleteGameAsync(id);
-            return ApiOk(null, "Xóa Game thành công");
+            return ApiOk(null, "Xóa Game thành công khỏi hệ thống.");
         }
     }
 }

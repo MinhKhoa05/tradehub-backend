@@ -3,6 +3,9 @@ using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {
+    /// <summary>
+    /// Repository quản lý biến động số dư ví (Nạp, Rút, Thanh toán).
+    /// </summary>
     public class WalletTransactionRepository : IWalletTransactionRepository
     {
         private readonly DatabaseContext _database;
@@ -14,8 +17,13 @@ namespace TradeHub.DAL.Repositories
 
         public async Task<List<WalletTransaction>> GetByUserIdAsync(long userId)
         {
+            // Hiển thị các giao dịch mới nhất lên trên cùng để người dùng dễ kiểm soát chi tiêu.
             var sql = "SELECT * FROM wallet_transactions WHERE user_id = @UserId ORDER BY created_at DESC";
-            return await _database.QueryAsync<WalletTransaction>(sql, new { UserId = userId });
+            
+            return await _database.QueryAsync<WalletTransaction>(sql, new 
+            { 
+                UserId = userId 
+            });
         }
         
         public async Task<long> CreateAsync(WalletTransaction walletTransaction)

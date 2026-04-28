@@ -2,10 +2,16 @@ using TradeHub.BLL.Common;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
+using TradeHub.DAL.DTOs;
 
 namespace TradeHub.BLL.ApplicationServices
 {
-    public class OrderUseCase : BaseService
+    /// <summary>
+    /// OrderUseCase điều phối luồng nghiệp vụ phức tạp liên quan đến đặt hàng.
+    /// UseCase đóng vai trò là "nhạc trưởng", kết hợp nhiều Service (Cart, Wallet, Order) 
+    /// trong một Transaction duy nhất để đảm bảo tính toàn vẹn dữ liệu.
+    /// </summary>
+    public class OrderUseCase
     {
         private readonly CartService _cartService;
         private readonly WalletService _walletService;
@@ -16,9 +22,7 @@ namespace TradeHub.BLL.ApplicationServices
             CartService cartService,
             WalletService walletService,
             OrderService orderService,
-            DatabaseContext database,
-            IIdentityService identityService)
-            : base(identityService)
+            DatabaseContext database)
         {
             _cartService = cartService;
             _walletService = walletService;
@@ -27,65 +31,68 @@ namespace TradeHub.BLL.ApplicationServices
         }
 
         /// <summary>
-        /// Thực hiện quy trình Checkout
+        /// Luồng Checkout: Kiểm tra giỏ -> Trừ tiền ví -> Tạo đơn hàng -> Xóa giỏ.
+        /// Sử dụng Transaction để đảm bảo nếu bất kỳ bước nào thất bại, tiền của khách hàng sẽ không bị mất
+        /// và giỏ hàng không bị xóa oan.
         /// </summary>
-        /// <param name="userId">ID người dùng</param>
-        /// <param name="cartId">ID giỏ hàng (Trong logic hiện tại là UserId)</param>
-        /// <param name="gameAccountInfo">Thông tin tài khoản game để nạp</param>
-        /// <returns>Kết quả xử lý Checkout</returns>
-        public async Task<ServiceResult> CheckoutAsync(long userId, long cartId, string gameAccountInfo)
+        public async Task<ServiceResult> CheckoutAsync(UserContext context, string gameAccountInfo)
         {
             try
             {
-                // 1. Lấy thông tin giỏ hàng
-                var cartItems = await _cartService.GetMyDetailsAsync();
+                var cartItems = await _cartService.GetDetailsAsync(context);
                 if (cartItems == null || !cartItems.Any())
                 {
                     return ServiceResult.Failure("Giỏ hàng của bạn đang trống.");
                 }
 
-                // 2. Tính tổng tiền
                 decimal totalAmount = cartItems.Sum(item => item.Price * item.Quantity);
 
-                // 3. Sử dụng Transaction để đảm bảo tính toàn vẹn (Atomic: Trừ tiền + Tạo đơn + Xóa giỏ)
+                // Thực hiện toàn bộ logic trong Transaction để đảm bảo tính Atomicity (Tất cả hoặc không gì cả)
                 return await _database.ExecuteInTransactionAsync(async () =>
                 {
-                    // A. Trừ tiền từ ví
-                    // Lưu ý: Nếu DeductMoneyAsync ném Exception, Transaction sẽ tự động Rollback
-                    long transactionId = await _walletService.DeductMoneyAsync(userId, totalAmount, $"Thanh toán đơn hàng từ giỏ hàng.");
-
-                    var orderIds = new List<long>();
-
-                    // B. Tạo đơn hàng cho từng sản phẩm trong giỏ (Hoặc gộp lại tùy nghiệp vụ)
-                    // Ở đây tôi tạo mỗi item là một Order theo cấu trúc bảng Orders hiện tại
-                    foreach (var item in cartItems)
-                    {
-                        var order = new Order
-                        {
-                            UserId = userId,
-                            GamePackageId = item.ProductId,
-                            UnitPrice = item.Price,
-                            Quantity = item.Quantity,
-                            GameAccountInfo = gameAccountInfo,
-                            Status = OrderStatus.Pending
-                        };
-
-                        var orderId = await _orderService.CreateOrderAsync(order, transactionId);
-                        orderIds.Add(orderId);
-                    }
-
-                    // C. Xóa giỏ hàng sau khi đặt thành công
-                    await _cartService.ClearAsync();
+                    // 1. Trừ tiền trước để xác thực khả năng thanh toán
+                    var transactionId = await _walletService.DeductMoneyAsync(context, totalAmount, "Thanh toán đơn hàng từ giỏ hàng.");
+                    
+                    // 2. Tạo các bản ghi đơn hàng tương ứng
+                    var orderIds = await CreateOrdersFromCartAsync(context, cartItems, gameAccountInfo, transactionId);
+                    
+                    // 3. Xóa giỏ hàng sau khi đã đặt hàng thành công
+                    await _cartService.ClearAsync(context);
 
                     return ServiceResult.Success("Đặt hàng thành công!", new { OrderIds = orderIds, TransactionId = transactionId });
                 });
             }
             catch (Exception ex)
             {
-                // Xử lý ngoại lệ chặt chẽ: lỗi số dư không đủ, lỗi kết nối DB, v.v.
-                // Nếu là lỗi nghiệp vụ (BusinessException), ta trả về message cụ thể
-                return ServiceResult.Failure($"Lỗi Checkout: {ex.Message}");
+                // Log exception if necessary
+                return ServiceResult.Failure($"Quá trình thanh toán gặp lỗi: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// Tách nhỏ logic tạo đơn hàng để hàm chính (CheckoutAsync) tập trung vào luồng thực thi (Flow).
+        /// </summary>
+        private async Task<List<long>> CreateOrdersFromCartAsync(UserContext context, List<CartDetailDTO> items, string accountInfo, long txId)
+        {
+            var orderIds = new List<long>();
+            
+            foreach (var item in items)
+            {
+                var order = new Order
+                {
+                    UserId = context.UserId,
+                    GamePackageId = item.ProductId,
+                    UnitPrice = item.Price,
+                    Quantity = item.Quantity,
+                    GameAccountInfo = accountInfo,
+                    Status = OrderStatus.Pending
+                };
+                
+                var newOrderId = await _orderService.CreateOrderAsync(order, txId);
+                orderIds.Add(newOrderId);
+            }
+            
+            return orderIds;
         }
     }
 }

@@ -8,6 +8,11 @@ using TradeHub.BLL.DTOs.Auths;
 
 namespace TradeHub.BLL.Common
 {
+    /// <summary>
+    /// TokenService quản lý việc tạo định danh điện tử (JWT) cho người dùng.
+    /// JWT được sử dụng để duy trì trạng thái đăng nhập một cách Stateless, giúp hệ thống 
+    /// dễ dàng mở rộng và giảm tải cho Database.
+    /// </summary>
     public class TokenService
     {
         private readonly JwtSettings _jwtSettings;
@@ -22,20 +27,26 @@ namespace TradeHub.BLL.Common
                 Encoding.UTF8.GetBytes(_jwtSettings.Key));
         }
 
+        /// <summary>
+        /// Tạo Access Token dựa trên thông tin định danh của người dùng.
+        /// Các Claims được nhúng vào Token để các tầng khác có thể trích xuất thông tin
+        /// mà không cần truy vấn lại Database.
+        /// </summary>
         public string GenerateAccessToken(TokenRequest tokenRequest)
         {
             var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, tokenRequest.UserId.ToString()),
-            new Claim(ClaimTypes.Name, tokenRequest.Name),
-            new Claim(JwtRegisteredClaimNames.Email, tokenRequest.Email),
-            new Claim(ClaimTypes.Role, tokenRequest.Role),
+            {
+                new Claim(ClaimTypes.NameIdentifier, tokenRequest.UserId.ToString()),
+                new Claim(ClaimTypes.Name, tokenRequest.Name),
+                new Claim(JwtRegisteredClaimNames.Email, tokenRequest.Email),
+                new Claim(ClaimTypes.Role, tokenRequest.Role),
 
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new Claim(JwtRegisteredClaimNames.Iat,
-                DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-                ClaimValueTypes.Integer64)
-        };
+                // JTI giúp định danh duy nhất mỗi Token, hỗ trợ việc Revoke Token nếu cần
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new Claim(JwtRegisteredClaimNames.Iat,
+                    DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
+                    ClaimValueTypes.Integer64)
+            };
 
             var credentials = new SigningCredentials(
                 _securityKey,

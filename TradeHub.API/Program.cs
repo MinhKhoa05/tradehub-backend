@@ -113,8 +113,8 @@ builder.Services.AddScoped<OrderUseCase>();
 
 // ================= COMMON SERVICES =================
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IIdentityService, IdentityService>();
 builder.Services.AddScoped<TokenService>();
+
 builder.Services.AddScoped<PasswordService>();
 
 var app = builder.Build();

@@ -21,17 +21,21 @@ namespace TradeHub.BLL.Services
 
         public async Task<Game> GetGameByIdAsync(long id)
         {
-            return await _gameRepo.GetByIdAsync(id) 
-                ?? throw new BusinessException("Game không tồn tại");
+            var game = await _gameRepo.GetByIdAsync(id);
+            if (game == null)
+            {
+                throw new BusinessException("Game không tồn tại trong hệ thống.");
+            }
+            return game;
         }
 
         public async Task<Game> CreateGameAsync(CreateGameRequest request)
         {
-            var game = new Game
-            {
-                Name = request.Name,
-                ImageUrl = request.ImageUrl,
-                IsActive = request.IsActive
+            var game = new Game 
+            { 
+                Name = request.Name, 
+                ImageUrl = request.ImageUrl, 
+                IsActive = request.IsActive 
             };
             
             game.Id = await _gameRepo.CreateAsync(game);
@@ -41,10 +45,19 @@ namespace TradeHub.BLL.Services
         public async Task<Game> UpdateGameAsync(long id, UpdateGameRequest request)
         {
             var game = await GetGameByIdAsync(id);
-
-            if (request.Name != null) game.Name = request.Name;
-            if (request.ImageUrl != null) game.ImageUrl = request.ImageUrl;
-            if (request.IsActive.HasValue) game.IsActive = request.IsActive.Value;
+            
+            if (request.Name != null) 
+            {
+                game.Name = request.Name;
+            }
+            if (request.ImageUrl != null) 
+            {
+                game.ImageUrl = request.ImageUrl;
+            }
+            if (request.IsActive.HasValue) 
+            {
+                game.IsActive = request.IsActive.Value;
+            }
 
             await _gameRepo.UpdateAsync(game);
             return game;
@@ -52,7 +65,8 @@ namespace TradeHub.BLL.Services
 
         public async Task DeleteGameAsync(long id)
         {
-            await GetGameByIdAsync(id); // Check exists
+            // Kiểm tra tồn tại trước khi xóa để đưa ra lỗi nghiệp vụ rõ ràng
+            await GetGameByIdAsync(id);
             await _gameRepo.DeleteAsync(id);
         }
     }

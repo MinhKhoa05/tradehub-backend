@@ -4,6 +4,9 @@ using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {
+    /// <summary>
+    /// Repository quản lý thông tin đơn hàng.
+    /// </summary>
     public class OrderRepository : IOrderRepository
     {
         private readonly DatabaseContext _database;
@@ -16,18 +19,32 @@ namespace TradeHub.DAL.Repositories
         public async Task<Order?> GetByIdAsync(long orderId)
         {
             var sql = "SELECT * FROM orders WHERE id = @Id";
-            return await _database.QueryFirstAsync<Order>(sql, new { Id = orderId });
+            
+            return await _database.QueryFirstAsync<Order>(sql, new 
+            { 
+                Id = orderId 
+            });
         }
 
         public async Task<List<Order>> GetByUserIdAsync(long userId, OrderStatus? status = null)
         {
+            // Hỗ trợ lọc theo trạng thái đơn hàng nếu người dùng yêu cầu.
             var sql = @"SELECT * FROM orders
                         WHERE user_id = @UserId
                         AND (@Status IS NULL OR status = @Status)
                         ORDER BY created_at DESC";
-            return await _database.QueryAsync<Order>(sql, new { UserId = userId, Status = status });
+            
+            return await _database.QueryAsync<Order>(sql, new 
+            { 
+                UserId = userId, 
+                Status = status 
+            });
         }
 
+        /// <summary>
+        /// Kiểm tra quyền sở hữu đơn hàng của người dùng.
+        /// Việc kiểm tra này cực kỳ quan trọng trước khi cho phép người dùng xem chi tiết hoặc thực hiện hành động với đơn hàng.
+        /// </summary>
         public async Task<bool> IsOrderBelongsToUserAsync(long userId, long orderId)
         {
             var sql = @"
@@ -38,7 +55,11 @@ namespace TradeHub.DAL.Repositories
                 );
             ";
 
-            return await _database.ScalarAsync<bool>(sql, new { UserId = userId, OrderId = orderId });
+            return await _database.ScalarAsync<bool>(sql, new 
+            { 
+                UserId = userId, 
+                OrderId = orderId 
+            });
         }
 
         public async Task<int> CreateRangeAsync(IEnumerable<Order> orders)
@@ -79,7 +100,12 @@ namespace TradeHub.DAL.Repositories
         public async Task<int> UpdateStatusAsync(long orderId, OrderStatus newStatus)
         {
             var sql = "UPDATE orders SET status = @Status, updated_at = CURRENT_TIMESTAMP WHERE id = @Id";
-            return await _database.ExecuteAsync(sql, new { Id = orderId, Status = newStatus });
+            
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                Id = orderId, 
+                Status = newStatus 
+            });
         }
     }
 }

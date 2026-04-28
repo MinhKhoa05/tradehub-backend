@@ -5,17 +5,22 @@ using Dommel;
 
 namespace TradeHub.DAL
 {
-    public class DatabaseContext : IAsyncDisposable
+    /// <summary>
+    /// DatabaseContext quản lý kết nối và giao dịch (Transaction) với cơ sở dữ liệu.
+    /// Việc tập trung quản lý Transaction tại đây giúp đảm bảo tính toàn vẹn dữ liệu (ACID)
+    /// khi thực hiện nhiều thao tác ghi đồng thời trong một UseCase.
+    /// </summary>
+    public class DatabaseContext : IAsyncDisposable, IDisposable
     {
         private readonly DbConnection _connection;
         private DbTransaction? _transaction;
 
         static DatabaseContext()
         {
-            // 1. Dapper Core: Map từ DB lên Object (Chiều đọc)
+            // Cấu hình Dapper để tự động khớp các cột Snake Case (db_column) với Property Pascal Case (DbColumn).
             DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-            // 2. Dommel: Map Property -> Column (Chiều ghi)
+            // Cấu hình Dommel để thực hiện chuyển đổi tương tự khi sinh câu lệnh SQL tự động.
             DommelMapper.SetColumnNameResolver(new SnakeCaseResolver());
         }
 
@@ -26,13 +31,14 @@ namespace TradeHub.DAL
 
         public DbConnection Connection => _connection;
         public DbTransaction? Transaction => _transaction;
-
         public bool HasActiveTransaction => _transaction != null;
 
         public async Task EnsureOpenAsync()
         {
             if (_connection.State != ConnectionState.Open)
+            {
                 await _connection.OpenAsync();
+            }
         }
 
         #region Transaction Handling
@@ -40,13 +46,16 @@ namespace TradeHub.DAL
         private async Task BeginTransactionAsync()
         {
             await EnsureOpenAsync();
-            _transaction ??= await _connection.BeginTransactionAsync();
+            if (_transaction == null)
+            {
+                _transaction = await _connection.BeginTransactionAsync();
+            }
         }
 
         private async Task CommitAsync()
         {
             if (_transaction == null) return;
-
+            
             await _transaction.CommitAsync();
             await _transaction.DisposeAsync();
             _transaction = null;
@@ -61,10 +70,17 @@ namespace TradeHub.DAL
             _transaction = null;
         }
 
+        /// <summary>
+        /// Thực thi một chuỗi các hành động bên trong một Transaction.
+        /// Nếu có lỗi xảy ra, toàn bộ các thay đổi sẽ được Rollback để bảo vệ dữ liệu.
+        /// </summary>
         public virtual async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
         {
+            // Nếu đã có transaction đang chạy (lồng nhau), chỉ thực thi action mà không tạo mới transaction.
             if (_transaction != null)
+            {
                 return await action();
+            }
 
             try
             {
@@ -95,19 +111,27 @@ namespace TradeHub.DAL
 
         public async ValueTask DisposeAsync()
         {
-            if (_transaction != null)
-                await _transaction.DisposeAsync();
+            if (_transaction != null) await _transaction.DisposeAsync();
+            if (_connection != null) await _connection.DisposeAsync();
+        }
 
-            await _connection.DisposeAsync();
+        public void Dispose()
+        {
+            _transaction?.Dispose();
+            _connection?.Dispose();
         }
     }
 
+    /// <summary>
+    /// Chuyển đổi tên Property (PascalCase) sang tên cột DB (snake_case).
+    /// </summary>
     public class SnakeCaseResolver : IColumnNameResolver
     {
         public string ResolveColumnName(System.Reflection.PropertyInfo propertyInfo)
         {
             var text = propertyInfo.Name;
-            return string.Concat(text.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
+            var result = string.Concat(text.Select((x, i) => i > 0 && char.IsUpper(x) ? "_" + x.ToString() : x.ToString())).ToLower();
+            return result;
         }
     }
 }

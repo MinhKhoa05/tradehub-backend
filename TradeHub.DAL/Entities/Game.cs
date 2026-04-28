@@ -6,7 +6,7 @@ namespace TradeHub.DAL.Entities
         public string Name { get; set; }
         public string ImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
-
-        // Tracking nếu có
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     }
 }

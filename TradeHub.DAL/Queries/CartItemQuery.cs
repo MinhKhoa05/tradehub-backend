@@ -1,5 +1,11 @@
+using TradeHub.DAL.DTOs;
+
 namespace TradeHub.DAL.Queries
 {
+    /// <summary>
+    /// Thực hiện các truy vấn phức tạp liên quan đến giỏ hàng, bao gồm việc JOIN nhiều bảng 
+    /// để lấy thông tin chi tiết gói nạp (tên, giá).
+    /// </summary>
     public class CartItemQuery
     {
         private readonly DatabaseContext _database;
@@ -11,6 +17,7 @@ namespace TradeHub.DAL.Queries
 
         public async Task<List<CartDetailDTO>> GetCartDetailDTOsAsync(long userId)
         {
+            // JOIN với bảng game_packages để lấy thông tin giá và tên sản phẩm tại thời điểm truy vấn.
             var sql = @"
                     SELECT 
                         c.game_package_id AS ProductId,
@@ -22,16 +29,10 @@ namespace TradeHub.DAL.Queries
                     WHERE c.user_id = @UserId
                 ";
 
-            return await _database.QueryAsync<CartDetailDTO>(sql, new { UserId = userId });
+            return await _database.QueryAsync<CartDetailDTO>(sql, new 
+            { 
+                UserId = userId 
+            });
         }
-    }
-
-    public class CartDetailDTO
-    {
-        public long ProductId { get; set; }
-        public string ProductName { get; set; } = null!;
-        public decimal Price { get; set; }
-        public decimal TotalPrice => Price * Quantity;
-        public int Quantity { get; set; }
     }
 }

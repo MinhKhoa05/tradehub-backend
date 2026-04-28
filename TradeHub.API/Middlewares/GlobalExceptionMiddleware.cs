@@ -1,9 +1,14 @@
-﻿using System.Net;
+using System.Net;
 using System.Text.Json;
 using TradeHub.BLL.Exceptions;
 
 namespace TradeHub.API.Middlewares
 {
+    /// <summary>
+    /// Middleware xử lý ngoại lệ tập trung cho toàn bộ ứng dụng.
+    /// Việc gom lỗi về một nơi giúp đảm bảo phản hồi trả về Client luôn thống nhất về cấu trúc,
+    /// đồng thời bảo mật thông tin bằng cách không để lộ chi tiết lỗi kỹ thuật (Stack Trace).
+    /// </summary>
     public class GlobalExceptionMiddleware
     {
         private readonly RequestDelegate _next;
@@ -23,6 +28,7 @@ namespace TradeHub.API.Middlewares
             }
             catch (Exception ex)
             {
+                // Nếu Response đã bắt đầu gửi (Headers đã gửi), ta không được phép ghi đè StatusCode hay Content nữa.
                 if (context.Response.HasStarted)
                 {
                     _logger.LogWarning("Response đã bắt đầu gửi về client, không thể can thiệp thêm vào Middleware.");
@@ -36,22 +42,33 @@ namespace TradeHub.API.Middlewares
 
         private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
-            // Chỉ set khi chưa bắt đầu gửi response, tránh lỗi "Headers already sent"
             context.Response.ContentType = "application/json";
 
-            var statusCode = ex switch
+            // Phân loại mã lỗi HTTP dựa trên kiểu Exception ném ra từ tầng nghiệp vụ.
+            var statusCode = HttpStatusCode.InternalServerError;
+            
+            if (ex is NotFoundException)
             {
-                NotFoundException => HttpStatusCode.NotFound,
-                UnauthorizedAccessException => HttpStatusCode.Unauthorized,
-                BusinessException => HttpStatusCode.BadRequest,
-                _ => HttpStatusCode.InternalServerError
-            };
+                statusCode = HttpStatusCode.NotFound;
+            }
+            else if (ex is UnauthorizedAccessException)
+            {
+                statusCode = HttpStatusCode.Unauthorized;
+            }
+            else if (ex is BusinessException)
+            {
+                statusCode = HttpStatusCode.BadRequest;
+            }
 
             context.Response.StatusCode = (int)statusCode;
 
-            var message = statusCode == HttpStatusCode.InternalServerError
-                ? "Đã xảy ra lỗi không mong muốn."
-                : ex.Message;
+            // Nếu là lỗi hệ thống (500), ẩn chi tiết lỗi để bảo mật. 
+            // Ngược lại, trả về thông báo lỗi nghiệp vụ cụ thể cho người dùng.
+            var message = "Đã xảy ra lỗi không mong muốn trên hệ thống.";
+            if (statusCode != HttpStatusCode.InternalServerError)
+            {
+                message = ex.Message;
+            }
 
             var response = ApiResponse.Fail(message);
 

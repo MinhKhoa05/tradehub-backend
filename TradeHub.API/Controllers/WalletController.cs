@@ -7,7 +7,7 @@ namespace TradeHub.API.Controllers
     [Authorize]
     [Route("api/wallet")]
     [ApiController]
-    public class WalletController : BaseController
+    public class WalletController : ApiControllerBase
     {
         private readonly WalletService _wallet;
 
@@ -17,38 +17,38 @@ namespace TradeHub.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetMyBalance()
+        public async Task<IActionResult> GetBalance()
         {
-            var wallet = await _wallet.GetMyBalanceAsync();
-            return ApiOk(wallet);
+            var balance = await _wallet.GetBalanceAsync(CurrentUser);
+            return ApiOk(balance);
         }
 
         [HttpGet("transactions")]
-        public async Task<IActionResult> GetWalletTransaction()
+        public async Task<IActionResult> GetWalletTransactions()
         {
-            var transactions = await _wallet.GetMyTransactionsAsync();
+            var transactions = await _wallet.GetTransactionsAsync(CurrentUser);
             return ApiOk(transactions);
         }
 
         [HttpPost("transactions/deposit")]
         public async Task<IActionResult> Deposit([FromBody] int amount)
         {
-            var transaction = await _wallet.DepositAsync(amount);
-            return ApiOk(transaction);
+            var transactionId = await _wallet.DepositAsync(CurrentUser, amount);
+            return ApiOk(new { TransactionId = transactionId }, "Nạp tiền thành công.");
         }
 
         [HttpPost("transactions/withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] int amount)
         {
-            var transaction = await _wallet.WithdrawAsync(amount);
-            return ApiOk(transaction);
+            var transactionId = await _wallet.WithdrawAsync(CurrentUser, amount);
+            return ApiOk(new { TransactionId = transactionId }, "Rút tiền thành công.");
         }
 
         [HttpPost("pay")]
         public async Task<IActionResult> Pay([FromBody] PayRequest request)
         {
-            var transaction = await _wallet.PayForOrdersAsync(request.OrderIds, request.TotalAmount);
-            return ApiOk(transaction);
+            var transactionId = await _wallet.PayForOrdersAsync(CurrentUser, request.OrderIds, request.TotalAmount);
+            return ApiOk(new { TransactionId = transactionId }, "Thanh toán đơn hàng thành công.");
         }
     }
 

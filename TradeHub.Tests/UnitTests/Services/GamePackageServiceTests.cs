@@ -1,5 +1,4 @@
 using Moq;
-using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.GamePackages;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Services;
@@ -14,15 +13,13 @@ namespace TradeHub.Tests.UnitTests.Services
     {
         private readonly Mock<IGamePackageRepository> _packageRepoMock;
         private readonly Mock<IGameRepository> _gameRepoMock;
-        private readonly Mock<IIdentityService> _identityServiceMock;
         private readonly GamePackageService _packageService;
 
         public GamePackageServiceTests()
         {
             _packageRepoMock = new Mock<IGamePackageRepository>();
             _gameRepoMock = new Mock<IGameRepository>();
-            _identityServiceMock = new Mock<IIdentityService>();
-            _packageService = new GamePackageService(_packageRepoMock.Object, _gameRepoMock.Object, _identityServiceMock.Object);
+            _packageService = new GamePackageService(_packageRepoMock.Object, _gameRepoMock.Object);
         }
 
         [Fact]

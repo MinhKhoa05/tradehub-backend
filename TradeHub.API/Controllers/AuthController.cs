@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.DTOs.Users;
@@ -8,7 +8,7 @@ namespace TradeHub.API.Controllers
 {
     [Route("api/auth")]
     [ApiController]
-    public class AuthController : BaseController
+    public class AuthController : ApiControllerBase
     {
         private readonly AuthService _auth;
         
@@ -21,7 +21,7 @@ namespace TradeHub.API.Controllers
         public async Task<IActionResult> Register(CreateUserRequest registerRequest)
         {
             await _auth.RegisterAsync(registerRequest);
-            return ApiCreated();
+            return ApiCreated(null, "Đăng ký tài khoản thành công.");
         }
 
         [HttpPost("login")]
@@ -29,28 +29,28 @@ namespace TradeHub.API.Controllers
         {
             string token = await _auth.LoginAsync(loginRequest);
 
+            // Cấu hình Cookie để tăng tính bảo mật (HttpOnly)
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = false, 
+                Secure = false, // Nên bật True nếu chạy trên HTTPS
                 SameSite = SameSiteMode.Lax,
                 Expires = DateTime.UtcNow.AddDays(7)
             };
 
-            // Thêm dòng kiểm tra này cho chắc ăn
             if (!Response.HasStarted)
             {
                 Response.Cookies.Append("accessToken", token, cookieOptions);
             }
 
-            return Ok(new { accessToken = token }); // Dùng Ok() mặc định để test
+            return ApiOk(new { accessToken = token }, "Đăng nhập thành công.");
         }
 
         [Authorize]
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword(PasswordChangeRequest passwordChangeRequest)
         {
-            await _auth.ChangePasswordAsync(passwordChangeRequest);
+            await _auth.ChangePasswordAsync(CurrentUser, passwordChangeRequest);
             return ApiNoContent();
         }
     }

@@ -23,58 +23,44 @@ namespace TradeHub.BLL.ApplicationServices
         public async Task RegisterAsync(CreateUserRequest request)
         {
             _password.Validate(request.Password);
-
-            // Hash mật khẩu trước khi đưa xuống tầng dưới
-            var passwordHash = _password.Hash(request.Password);
-            request.Password = passwordHash;
-
-            await _user.RegisterAsync(request); // Đã sửa theo UserService mới
+            request.Password = _password.Hash(request.Password);
+            await _user.RegisterAsync(request);
         }
 
         public async Task<string> LoginAsync(LoginRequest request)
         {
-            var user = await _user.GetByEmailAsync(request.Email)
-                        ?? throw new BusinessException("Email hoặc mật khẩu không đúng");
+            var user = await _user.GetByEmailAsync(request.Email);
+            
+            if (user == null || !_password.Verify(request.Password, user.PasswordHash))
+            {
+                throw new BusinessException("Email hoặc mật khẩu không chính xác.");
+            }
 
-            if (!_password.Verify(request.Password, user.PasswordHash))
-                throw new BusinessException("Email hoặc mật khẩu không đúng");
-
-            return GenerateAccessTokenInternal(user);
-        }
-
-        public async Task ChangePasswordAsync(PasswordChangeRequest request)
-        {
-            // Bỏ 'My' vì ngữ cảnh Auth của user hiện tại đã quá rõ ràng
-            if (request.CurrentPassword == request.NewPassword)
-                throw new BusinessException("Mật khẩu mới không được trùng mật khẩu hiện tại");
-
-            _password.Validate(request.NewPassword);
-
-            // Lấy profile chính mình để verify mật khẩu cũ
-            var user = await _user.GetMyProfileAsync();
-
-            if (!_password.Verify(request.CurrentPassword, user.PasswordHash))
-                throw new BusinessException("Mật khẩu hiện tại không đúng");
-
-            var newPasswordHash = _password.Hash(request.NewPassword);
-
-            // Gọi hàm đã refactor bên UserService
-            await _user.ChangePasswordAsync(newPasswordHash);
-        }
-
-        // ===== PRIVATE / INTERNAL =====
-
-        private string GenerateAccessTokenInternal(User user)
-        {
-            var tokenRequest = new TokenRequest
+            return _token.GenerateAccessToken(new TokenRequest
             {
                 UserId = user.Id,
                 Email = user.Email,
                 Name = user.Username,
                 Role = user.Role.ToString()
-            };
+            });
+        }
 
-            return _token.GenerateAccessToken(tokenRequest);
+        public async Task ChangePasswordAsync(UserContext context, PasswordChangeRequest request)
+        {
+            if (request.CurrentPassword == request.NewPassword)
+            {
+                throw new BusinessException("Mật khẩu mới không được trùng với mật khẩu hiện tại.");
+            }
+            
+            _password.Validate(request.NewPassword);
+
+            var user = await _user.GetProfileAsync(context.UserId);
+            if (!_password.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                throw new BusinessException("Mật khẩu hiện tại không chính xác.");
+            }
+
+            await _user.ChangePasswordAsync(context.UserId, _password.Hash(request.NewPassword));
         }
     }
 }

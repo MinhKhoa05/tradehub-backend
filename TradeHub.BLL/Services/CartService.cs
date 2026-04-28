@@ -1,85 +1,89 @@
-﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Carts;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Queries;
+using TradeHub.DAL.DTOs;
 using TradeHub.DAL.Repositories;
 
 namespace TradeHub.BLL.Services
 {
-    public class CartService : BaseService
+    public class CartService
     {
         private readonly CartItemRepository _cartItemRepo;
         private readonly CartItemQuery _cartItemQuery;
 
-        public CartService(CartItemRepository cartItemRepo, CartItemQuery cartItemQuery, IIdentityService identityService)
-            : base(identityService)
+        public CartService(CartItemRepository cartItemRepo, CartItemQuery cartItemQuery)
         {
             _cartItemRepo = cartItemRepo;
             _cartItemQuery = cartItemQuery;
         }
 
-        // ===== READ (Giữ 'My' để khẳng định đây là giỏ hàng riêng tư) =====
-        public async Task<List<CartDetailDTO>> GetMyDetailsAsync()
+        public async Task<List<CartDetailDTO>> GetDetailsAsync(UserContext context)
         {
-            return await _cartItemQuery.GetCartDetailDTOsAsync(CurrentUserId);
+            return await _cartItemQuery.GetCartDetailDTOsAsync(context.UserId);
         }
 
-        public async Task<int> GetMyTotalQuantityAsync()
+        public async Task<int> GetTotalQuantityAsync(UserContext context)
         {
-            return await _cartItemRepo.GetTotalQuantityAsync(CurrentUserId);
+            return await _cartItemRepo.GetTotalQuantityAsync(context.UserId);
         }
 
-        // ===== ACTIONS (Thao tác nghiệp vụ - Bỏ 'My') =====
-
-        public async Task<CartItem> AddItemAsync(CartItemRequest request)
+        public async Task<CartItem> AddItemAsync(UserContext context, CartItemRequest request)
         {
             if (request.Quantity <= 0)
+            {
                 throw new BusinessException("Số lượng sản phẩm phải lớn hơn 0.");
+            }
 
-            var cartItem = await _cartItemRepo.GetByUserPackageAsync(CurrentUserId, request.ProductId);
-
+            var cartItem = await _cartItemRepo.GetByUserPackageAsync(context.UserId, request.ProductId);
+            
             if (cartItem != null)
             {
+                // Nếu sản phẩm đã tồn tại, ta chỉ cần cập nhật tăng số lượng
                 cartItem.Quantity += request.Quantity;
-                await _cartItemRepo.UpdateQuantityAsync(CurrentUserId, cartItem.GamePackageId, cartItem.Quantity);
+                await _cartItemRepo.UpdateQuantityAsync(context.UserId, cartItem.GamePackageId, cartItem.Quantity);
                 return cartItem;
             }
 
-            cartItem = new CartItem
-            {
-                UserId = CurrentUserId,
-                GamePackageId = request.ProductId,
-                Quantity = request.Quantity,
+            // Tạo mới item trong giỏ hàng nếu chưa có
+            cartItem = new CartItem 
+            { 
+                UserId = context.UserId, 
+                GamePackageId = request.ProductId, 
+                Quantity = request.Quantity 
             };
-
+            
             cartItem.Id = await _cartItemRepo.CreateAsync(cartItem);
             return cartItem;
         }
 
-        public async Task UpdateItemQuantityAsync(int productId, int quantity)
+        public async Task UpdateItemQuantityAsync(UserContext context, long productId, int quantity)
         {
             if (quantity <= 0)
+            {
                 throw new BusinessException("Số lượng sản phẩm phải lớn hơn 0.");
+            }
 
-            var affected = await _cartItemRepo.UpdateQuantityAsync(CurrentUserId, productId, quantity);
-
-            if (affected == 0)
-                throw new BusinessException("Sản phẩm không tồn tại trong giỏ hàng của bạn.");
-        }
-
-        public async Task RemoveItemAsync(int productId)
-        {
-            var affected = await _cartItemRepo.DeleteAsync(CurrentUserId, productId);
-
-            if (affected == 0)
+            var rowsAffected = await _cartItemRepo.UpdateQuantityAsync(context.UserId, productId, quantity);
+            if (rowsAffected == 0)
+            {
                 throw new BusinessException("Sản phẩm không tồn tại trong giỏ hàng.");
+            }
         }
 
-        public async Task<int> ClearAsync()
+        public async Task RemoveItemAsync(UserContext context, long productId)
         {
-            // Xóa toàn bộ giỏ hàng của chính tôi
-            return await _cartItemRepo.DeleteByUserIdAsync(CurrentUserId);
+            var rowsAffected = await _cartItemRepo.DeleteAsync(context.UserId, productId);
+            if (rowsAffected == 0)
+            {
+                throw new BusinessException("Sản phẩm không tồn tại trong giỏ hàng.");
+            }
+        }
+
+        public async Task<int> ClearAsync(UserContext context)
+        {
+            return await _cartItemRepo.DeleteByUserIdAsync(context.UserId);
         }
     }
 }
