@@ -19,6 +19,10 @@ namespace TradeHub.DAL.Entities
         public int Quantity { get; set; }
 
         public decimal Total => UnitPrice * Quantity;
+
+        public long AssignTo { get; set; } // Admin đang nhận xử lý
+        public DateTime AssignAt { get; set; } // Thời điểm admin nhận xử lý
+
         public OrderStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }

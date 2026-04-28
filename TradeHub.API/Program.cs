@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using TradeHub.API;
 using TradeHub.API.Extensions;
 using TradeHub.API.Filters;
@@ -15,7 +15,6 @@ using TradeHub.DAL.Repositories.Interfaces;
 var builder = WebApplication.CreateBuilder(args);
 
 // ================= CORS CONFIGURATION =================
-// Lấy giá trị từ biến môi trường "AllowedOrigins" truyền từ Docker
 var originFromConfig = builder.Configuration["AllowedOrigins"];
 
 builder.Services.AddCors(options =>
@@ -83,34 +82,34 @@ builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddScoped<DatabaseContext>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    // Lấy chuỗi kết nối từ key "Default" (khớp với ConnectionStrings__Default trong Docker)
     var connectionString = config.GetConnectionString("Default");
-    return new DatabaseContext(connectionString!);
+    return new DatabaseContext(new MySqlConnector.MySqlConnection(connectionString!));
 });
 
 // ================= REPOSITORIES =================
 builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<CartItemRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 builder.Services.AddScoped<IOrderHistoryRepository, OrderHistoryRepository>();
-builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+builder.Services.AddScoped<IGameRepository, GameRepository>();
+builder.Services.AddScoped<IGamePackageRepository, GamePackageRepository>();
+builder.Services.AddScoped<IGameAccountRepository, GameAccountRepository>();
 
 // ================= QUERIES =================
 builder.Services.AddScoped<CartItemQuery>();
 
 // ================= SERVICES =================
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<GameService>();
+builder.Services.AddScoped<GamePackageService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<WalletService>();
 
 // ================= APPLICATION SERVICES =================
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<OrderUsecase>();
+builder.Services.AddScoped<OrderUseCase>();
 
 // ================= COMMON SERVICES =================
 builder.Services.AddHttpContextAccessor();
@@ -128,17 +127,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Kích hoạt CORS trước khi Auth và MapControllers
 app.UseCors("AllowReactApp");
-
-// Tắt HttpsRedirection để tránh lỗi SSL khi chạy Docker local với React
-// app.UseHttpsRedirection();
-
 app.UseMiddleware<GlobalExceptionMiddleware>();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
+public partial class Program { }

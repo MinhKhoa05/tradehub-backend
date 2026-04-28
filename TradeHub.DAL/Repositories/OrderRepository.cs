@@ -1,3 +1,4 @@
+using System.Data.Common;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories.Interfaces;
 
@@ -38,6 +39,36 @@ namespace TradeHub.DAL.Repositories
             ";
 
             return await _database.ScalarAsync<bool>(sql, new { UserId = userId, OrderId = orderId });
+        }
+
+        public async Task<int> CreateRangeAsync(IEnumerable<Order> orders)
+        {
+            var sql = @"INSERT INTO orders (
+                user_id,
+                game_account_info,
+                wallet_transaction_id,
+                game_package_id,
+                unit_price,
+                quantity,
+                status,
+                created_at,
+                updated_at,
+                updated_by
+            )
+            VALUES (
+                @UserId,
+                @GameAccountInfo,
+                @WalletTransactionId,
+                @GamePackageId,
+                @UnitPrice,
+                @Quantity,
+                @Status,
+                @CreatedAt,
+                @UpdatedAt,
+                @UpdatedBy
+            );";
+
+            return await _database.ExecuteAsync(sql, orders);
         }
 
         public async Task<long> CreateAsync(Order order)

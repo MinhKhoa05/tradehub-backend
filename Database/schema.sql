@@ -1,164 +1,110 @@
-SET SQL_MODE = 'NO_AUTO_VALUE_ON_ZERO';
-START TRANSACTION;
-SET time_zone = '+00:00';
+-- schema.sql
+-- Create database if not exists (handled by docker environment normally but good for reference)
+-- USE tradehub_db;
 
-CREATE DATABASE IF NOT EXISTS tradehub_db;
+-- 1. Table: users
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    balance DECIMAL(18, 2) DEFAULT 0.00,
+    role INT DEFAULT 0, -- 0: Member, 1: Admin, 2: Staff
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
-USE tradehub_db;
--- =====================
--- TABLES
--- =====================
+-- 2. Table: games
+CREATE TABLE IF NOT EXISTS games (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    image_url TEXT,
+    is_active BOOLEAN DEFAULT TRUE
+) ENGINE=InnoDB;
 
-CREATE TABLE users (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  phone VARCHAR(20) DEFAULT NULL,
-  avatar_url VARCHAR(500) DEFAULT NULL,
-  address TEXT DEFAULT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
+-- 3. Table: game_packages
+CREATE TABLE IF NOT EXISTS game_packages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    image_url TEXT,
+    normalized_name VARCHAR(150) NOT NULL,
+    game_id BIGINT NOT NULL,
+    sale_price DECIMAL(18, 2) NOT NULL,
+    original_price DECIMAL(18, 2) NOT NULL,
+    import_price DECIMAL(18, 2) NOT NULL,
+    package_budget DECIMAL(18, 2) NOT NULL,
+    spent_amount DECIMAL(18, 2) DEFAULT 0.00,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_package_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
-CREATE TABLE products (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50) NOT NULL,
-  normalized_name VARCHAR(50) NOT NULL,
-  stock INT NOT NULL DEFAULT 0,
-  price INT NOT NULL,
-  description TEXT,
-  seller_id BIGINT UNSIGNED NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+-- 4. Table: game_accounts
+CREATE TABLE IF NOT EXISTS game_accounts (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    game_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    account_identifier VARCHAR(150) NOT NULL,
+    server VARCHAR(100),
+    description TEXT,
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_account_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_account_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
-  INDEX idx_products_seller (seller_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
+-- 5. Table: cart_items
+CREATE TABLE IF NOT EXISTS cart_items (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    game_package_id BIGINT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cart_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
-CREATE TABLE cart_items (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL,
-  product_id BIGINT UNSIGNED NOT NULL,
-  quantity INT NOT NULL CHECK (quantity > 0),
+-- 6. Table: wallet_transactions
+CREATE TABLE IF NOT EXISTS wallet_transactions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    amount DECIMAL(18, 2) NOT NULL,
+    balance_after DECIMAL(18, 2) NOT NULL,
+    type INT NOT NULL, -- 1: Deposit, 2: Withdraw, 3: PaidOrder, 4: Refund
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
-  UNIQUE KEY uniq_cart (user_id, product_id),
-  INDEX idx_cart_user (user_id),
-  INDEX idx_cart_product (product_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
+-- 7. Table: orders
+CREATE TABLE IF NOT EXISTS orders (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    game_account_info TEXT NOT NULL,
+    wallet_transaction_id BIGINT,
+    game_package_id BIGINT NOT NULL,
+    unit_price DECIMAL(18, 2) NOT NULL,
+    quantity INT NOT NULL,
+    assign_to BIGINT,
+    assign_at DATETIME,
+    status INT NOT NULL, -- 1: Pending, 2: Processing, 3: Completed, 4: Cancelled
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_tx FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
-CREATE TABLE orders (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  buyer_id BIGINT UNSIGNED NOT NULL,
-  seller_id BIGINT UNSIGNED NOT NULL,
-  total_amount INT NOT NULL,
-  payment_method TINYINT NOT NULL,
-  status TINYINT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  INDEX idx_orders_buyer (buyer_id),
-  INDEX idx_orders_seller (seller_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE order_items (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  order_id BIGINT UNSIGNED NOT NULL,
-  product_id BIGINT UNSIGNED NOT NULL,
-  unit_price INT NOT NULL,
-  quantity INT NOT NULL CHECK (quantity > 0),
-
-  INDEX idx_order_items_order (order_id),
-  INDEX idx_order_items_product (product_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE order_history (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  order_id BIGINT UNSIGNED NOT NULL,
-  from_status TINYINT NULL,
-  to_status TINYINT NOT NULL,
-  changed_by BIGINT UNSIGNED NOT NULL,
-  actor_type TINYINT NOT NULL,
-  note TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  INDEX idx_order_history_order (order_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE wallets (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  user_id BIGINT UNSIGNED NOT NULL UNIQUE,
-  balance BIGINT NOT NULL DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE wallet_transactions (
-  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  wallet_id BIGINT UNSIGNED NOT NULL,
-  amount INT NOT NULL,
-  type SMALLINT NOT NULL,
-  reference_id BIGINT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  INDEX idx_wallet_id (wallet_id)
-) ENGINE=InnoDB 
-DEFAULT CHARSET=utf8mb4 
-COLLATE=utf8mb4_unicode_ci;
-
--- =====================
--- FOREIGN KEYS
--- =====================
-
-ALTER TABLE products
-  ADD CONSTRAINT fk_products_seller
-  FOREIGN KEY (seller_id) REFERENCES users(id)
-  ON DELETE CASCADE;
-
-ALTER TABLE cart_items
-  ADD CONSTRAINT fk_cart_user
-  FOREIGN KEY (user_id) REFERENCES users(id)
-  ON DELETE CASCADE,
-  ADD CONSTRAINT fk_cart_product
-  FOREIGN KEY (product_id) REFERENCES products(id)
-  ON DELETE CASCADE;
-
-ALTER TABLE orders
-  ADD CONSTRAINT fk_orders_buyer
-  FOREIGN KEY (buyer_id) REFERENCES users(id),
-  ADD CONSTRAINT fk_orders_seller
-  FOREIGN KEY (seller_id) REFERENCES users(id);
-
-ALTER TABLE order_items
-  ADD CONSTRAINT fk_order_items_order
-  FOREIGN KEY (order_id) REFERENCES orders(id)
-  ON DELETE CASCADE,
-  ADD CONSTRAINT fk_order_items_product
-  FOREIGN KEY (product_id) REFERENCES products(id);
-
-ALTER TABLE order_history
-  ADD CONSTRAINT fk_order_history_order
-  FOREIGN KEY (order_id) REFERENCES orders(id)
-  ON DELETE CASCADE,
-  ADD CONSTRAINT fk_order_history_user
-  FOREIGN KEY (changed_by) REFERENCES users(id);
-
-ALTER TABLE wallet_transactions
-  ADD CONSTRAINT fk_wallet_tx_wallet
-  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
-  ON DELETE CASCADE;
-
-COMMIT;
+-- 8. Table: order_history
+CREATE TABLE IF NOT EXISTS order_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    from_status INT NOT NULL,
+    to_status INT NOT NULL,
+    note TEXT,
+    action_by BIGINT NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

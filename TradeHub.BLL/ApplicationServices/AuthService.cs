@@ -1,4 +1,4 @@
-﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Auths;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.Exceptions;
@@ -70,7 +70,8 @@ namespace TradeHub.BLL.ApplicationServices
             {
                 UserId = user.Id,
                 Email = user.Email,
-                Name = user.Name
+                Name = user.Username,
+                Role = user.Role.ToString()
             };
 
             return _token.GenerateAccessToken(tokenRequest);

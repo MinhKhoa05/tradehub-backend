@@ -37,19 +37,19 @@ namespace TradeHub.BLL.Services
             if (request.Quantity <= 0)
                 throw new BusinessException("Số lượng sản phẩm phải lớn hơn 0.");
 
-            var cartItem = await _cartItemRepo.GetByUserProductAsync(CurrentUserId, request.ProductId);
+            var cartItem = await _cartItemRepo.GetByUserPackageAsync(CurrentUserId, request.ProductId);
 
             if (cartItem != null)
             {
                 cartItem.Quantity += request.Quantity;
-                await _cartItemRepo.UpdateQuantityAsync(CurrentUserId, cartItem.ProductId, cartItem.Quantity);
+                await _cartItemRepo.UpdateQuantityAsync(CurrentUserId, cartItem.GamePackageId, cartItem.Quantity);
                 return cartItem;
             }
 
             cartItem = new CartItem
             {
                 UserId = CurrentUserId,
-                ProductId = request.ProductId,
+                GamePackageId = request.ProductId,
                 Quantity = request.Quantity,
             };
 

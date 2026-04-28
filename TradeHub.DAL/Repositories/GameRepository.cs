@@ -31,8 +31,14 @@ namespace TradeHub.DAL.Repositories
 
         public async Task<int> UpdateAsync(Game game)
         {
-            var sql = @"UPDATE games SET name = @Name, image_url = @ImageUrl WHERE id = @Id";
+            var sql = @"UPDATE games SET name = @Name, image_url = @ImageUrl, is_active = @IsActive WHERE id = @Id";
             return await _database.ExecuteAsync(sql, game);
+        }
+
+        public async Task<int> DeleteAsync(long id)
+        {
+            var sql = "DELETE FROM games WHERE id = @Id";
+            return await _database.ExecuteAsync(sql, new { Id = id });
         }
     }
 }

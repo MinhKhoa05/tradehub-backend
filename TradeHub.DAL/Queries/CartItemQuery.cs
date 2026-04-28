@@ -1,4 +1,4 @@
-﻿namespace TradeHub.DAL.Queries
+namespace TradeHub.DAL.Queries
 {
     public class CartItemQuery
     {
@@ -12,15 +12,13 @@
         public async Task<List<CartDetailDTO>> GetCartDetailDTOsAsync(long userId)
         {
             var sql = @"
-                    SELECT
-                        c.product_id,
-                        p.name AS product_name,
-                        p.price,
-                        p.stock,
-                        p.seller_id,
+                    SELECT 
+                        c.game_package_id AS ProductId,
+                        p.name AS ProductName,
+                        p.sale_price AS Price,
                         c.quantity
                     FROM cart_items c
-                        JOIN products p ON p.id = c.product_id
+                    JOIN game_packages p ON p.id = c.game_package_id
                     WHERE c.user_id = @UserId
                 ";
 
@@ -30,12 +28,10 @@
 
     public class CartDetailDTO
     {
-        public int ProductId { get; set; }
-        public string ProductName { get; set; }
-        public int Price { get; set; }
-        public int TotalPrice => Price * Quantity;
-        public int Stock { get; set; }
-        public int SellerId { get; set; }
+        public long ProductId { get; set; }
+        public string ProductName { get; set; } = null!;
+        public decimal Price { get; set; }
+        public decimal TotalPrice => Price * Quantity;
         public int Quantity { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using TradeHub.BLL.DTOs.Users;
+using TradeHub.BLL.DTOs.Users;
 using TradeHub.DAL.Entities;
 
 namespace TradeHub.BLL.Mappings
@@ -10,7 +10,7 @@ namespace TradeHub.BLL.Mappings
             return new UserResponse
             {
                 Id = user.Id,
-                Name = user.Name,
+                Name = user.Username, // Map Username từ Entity sang Name trong DTO
                 Email = user.Email,
             };
         }

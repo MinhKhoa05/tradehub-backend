@@ -50,5 +50,11 @@ namespace TradeHub.DAL.Repositories
             var sql = "UPDATE game_packages SET spent_amount = spent_amount + @SpentAmountToAdd WHERE id = @Id";
             return await _database.ExecuteAsync(sql, new { Id = id, SpentAmountToAdd = spentAmountToAdd });
         }
+
+        public async Task<int> DeleteAsync(long id)
+        {
+            var sql = "DELETE FROM game_packages WHERE id = @Id";
+            return await _database.ExecuteAsync(sql, new { Id = id });
+        }
     }
 }

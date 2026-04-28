@@ -3,15 +3,17 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TradeHub.DAL.Entities
 {
-    [Table("order_logs")] // Đổi tên thành Logs cho nhẹ nhàng
-    public class OrderLog
+    [Table("order_history")]
+    public class OrderHistory
     {
         [Key]
         public long Id { get; set; }
 
         public long OrderId { get; set; }
 
-        public OrderStatus Status { get; set; } // Trạng thái mới được cập nhật
+
+        public OrderStatus FromStatus { get; set; }
+        public OrderStatus ToStatus { get; set; } // Trạng thái mới được cập nhật
 
         public string? Note { get; set; } // Lý do thay đổi (ví dụ: "Sai ID game", "Đã hoàn tiền")
 

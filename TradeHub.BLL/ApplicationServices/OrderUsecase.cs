@@ -1,94 +1,91 @@
-﻿using TradeHub.BLL.DTOs.Orders;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.Services;
-using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
-using TradeHub.DAL.DTOs;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Queries;
 
 namespace TradeHub.BLL.ApplicationServices
 {
-    public class OrderUsecase
+    public class OrderUseCase : BaseService
     {
-        private readonly ProductService _product;
-        private readonly OrderService _order;
-        private readonly CartService _cart;
-        private readonly WalletService _wallet;
+        private readonly CartService _cartService;
+        private readonly WalletService _walletService;
+        private readonly OrderService _orderService;
         private readonly DatabaseContext _database;
 
-        public OrderUsecase(
-            ProductService product,
-            OrderService order,
-            CartService cart,
-            WalletService wallet,
-            DatabaseContext database)
+        public OrderUseCase(
+            CartService cartService,
+            WalletService walletService,
+            OrderService orderService,
+            DatabaseContext database,
+            IIdentityService identityService)
+            : base(identityService)
         {
-            _product = product;
-            _order = order;
-            _cart = cart;
-            _wallet = wallet;
+            _cartService = cartService;
+            _walletService = walletService;
+            _orderService = orderService;
             _database = database;
         }
 
-        // Đổi tên từ PlaceMyOrder sang PlaceOrderAsync cho chuyên nghiệp
-        public async Task PlaceOrderAsync(PaymentMethod paymentMethod)
+        /// <summary>
+        /// Thực hiện quy trình Checkout
+        /// </summary>
+        /// <param name="userId">ID người dùng</param>
+        /// <param name="cartId">ID giỏ hàng (Trong logic hiện tại là UserId)</param>
+        /// <param name="gameAccountInfo">Thông tin tài khoản game để nạp</param>
+        /// <returns>Kết quả xử lý Checkout</returns>
+        public async Task<ServiceResult> CheckoutAsync(long userId, long cartId, string gameAccountInfo)
         {
-            // 1. Lấy thông tin giỏ hàng (Read - Giữ My)
-            var cartItems = await _cart.GetMyDetailsAsync();
-
-            if (cartItems.Count == 0)
-                throw new BusinessException("Giỏ hàng của bạn đang trống.");
-
-            var totalAmount = cartItems.Sum(i => i.Price * i.Quantity);
-
-            // 2. Kiểm tra số dư ví (Action - Bỏ My theo Service đã sửa)
-            if (paymentMethod == PaymentMethod.Wallet)
+            try
             {
-                await _wallet.EnsureBalanceIsEnoughAsync(totalAmount);
-            }
-
-            var stockUpdates = cartItems
-                .Select(item => new ProductStockUpdate(item.ProductId, item.Quantity))
-                .ToList();
-
-            var request = new CheckoutRequest
-            {
-                PaymentMethod = paymentMethod,
-                Items = MapToCheckoutItems(cartItems)
-            };
-
-            // 3. Thực thi nghiệp vụ phức tạp trong Transaction
-            await _database.ExecuteInTransactionAsync(async () =>
-            {
-                // Trừ tồn kho (Hành động khách quan)
-                await _product.DecreaseStockRangeAsync(stockUpdates);
-
-                // Tạo đơn hàng (Bỏ My)
-                var orderIds = await _order.CreateOrdersAsync(request);
-
-                // Thanh toán (Bỏ My)
-                if (paymentMethod == PaymentMethod.Wallet)
+                // 1. Lấy thông tin giỏ hàng
+                var cartItems = await _cartService.GetMyDetailsAsync();
+                if (cartItems == null || !cartItems.Any())
                 {
-                    await _wallet.PayForOrdersAsync(orderIds, totalAmount);
+                    return ServiceResult.Failure("Giỏ hàng của bạn đang trống.");
                 }
 
-                // Xóa giỏ hàng (Bỏ My)
-                var affected = await _cart.ClearAsync();
+                // 2. Tính tổng tiền
+                decimal totalAmount = cartItems.Sum(item => item.Price * item.Quantity);
 
-                if (affected == 0)
-                    throw new BusinessException("Không thể hoàn tất đặt hàng do giỏ hàng không tồn tại.");
-            });
-        }
+                // 3. Sử dụng Transaction để đảm bảo tính toàn vẹn (Atomic: Trừ tiền + Tạo đơn + Xóa giỏ)
+                return await _database.ExecuteInTransactionAsync(async () =>
+                {
+                    // A. Trừ tiền từ ví
+                    // Lưu ý: Nếu DeductMoneyAsync ném Exception, Transaction sẽ tự động Rollback
+                    long transactionId = await _walletService.DeductMoneyAsync(userId, totalAmount, $"Thanh toán đơn hàng từ giỏ hàng.");
 
-        private static List<CheckoutItem> MapToCheckoutItems(List<CartDetailDTO> cartItems)
-        {
-            return cartItems.Select(item => new CheckoutItem
+                    var orderIds = new List<long>();
+
+                    // B. Tạo đơn hàng cho từng sản phẩm trong giỏ (Hoặc gộp lại tùy nghiệp vụ)
+                    // Ở đây tôi tạo mỗi item là một Order theo cấu trúc bảng Orders hiện tại
+                    foreach (var item in cartItems)
+                    {
+                        var order = new Order
+                        {
+                            UserId = userId,
+                            GamePackageId = item.ProductId,
+                            UnitPrice = item.Price,
+                            Quantity = item.Quantity,
+                            GameAccountInfo = gameAccountInfo,
+                            Status = OrderStatus.Pending
+                        };
+
+                        var orderId = await _orderService.CreateOrderAsync(order, transactionId);
+                        orderIds.Add(orderId);
+                    }
+
+                    // C. Xóa giỏ hàng sau khi đặt thành công
+                    await _cartService.ClearAsync();
+
+                    return ServiceResult.Success("Đặt hàng thành công!", new { OrderIds = orderIds, TransactionId = transactionId });
+                });
+            }
+            catch (Exception ex)
             {
-                ProductId = item.ProductId,
-                Quantity = item.Quantity,
-                SellerId = item.SellerId,
-                UnitPrice = item.Price
-            }).ToList();
+                // Xử lý ngoại lệ chặt chẽ: lỗi số dư không đủ, lỗi kết nối DB, v.v.
+                // Nếu là lỗi nghiệp vụ (BusinessException), ta trả về message cụ thể
+                return ServiceResult.Failure($"Lỗi Checkout: {ex.Message}");
+            }
         }
     }
 }

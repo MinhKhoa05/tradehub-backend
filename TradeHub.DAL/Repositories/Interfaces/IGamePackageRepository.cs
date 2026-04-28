@@ -10,5 +10,6 @@ namespace TradeHub.DAL.Repositories.Interfaces
         Task<long> CreateAsync(GamePackage gamePackage);
         Task<int> UpdateAsync(GamePackage gamePackage);
         Task<int> UpdateStockBudgetAsync(long id, decimal spentAmount);
+        Task<int> DeleteAsync(long id);
     }
 }

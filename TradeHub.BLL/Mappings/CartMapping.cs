@@ -1,4 +1,4 @@
-﻿using TradeHub.BLL.DTOs.Carts;
+using TradeHub.BLL.DTOs.Carts;
 using TradeHub.DAL.Entities;
 
 namespace TradeHub.BLL.Mappings
@@ -10,14 +10,14 @@ namespace TradeHub.BLL.Mappings
             return new CartItemDTO
             {
                 Id = cartItem.Id,
-                ProductId = cartItem.ProductId,
+                ProductId = cartItem.GamePackageId,
                 Quantity = cartItem.Quantity,
 
                 Product = product == null ? null : new CartProductDTO
                 {
                     ProductId = product.Id,
                     Name = product.Name,
-                    Price = product.Price
+                    Price = (int)product.SalePrice // Ép kiểu nếu DTO yêu cầu int, hoặc sửa DTO sau
                 }
             };
         }

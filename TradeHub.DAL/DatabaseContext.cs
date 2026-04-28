@@ -1,14 +1,14 @@
 using System.Data;
+using System.Data.Common;
 using Dapper;
 using Dommel;
-using MySqlConnector;
 
 namespace TradeHub.DAL
 {
     public class DatabaseContext : IAsyncDisposable
     {
-        private readonly MySqlConnection _connection;
-        private MySqlTransaction? _transaction;
+        private readonly DbConnection _connection;
+        private DbTransaction? _transaction;
 
         static DatabaseContext()
         {
@@ -19,13 +19,13 @@ namespace TradeHub.DAL
             DommelMapper.SetColumnNameResolver(new SnakeCaseResolver());
         }
 
-        public DatabaseContext(string connectionString)
+        public DatabaseContext(DbConnection connection)
         {
-            _connection = new MySqlConnection(connectionString);
+            _connection = connection;
         }
 
-        public MySqlConnection Connection => _connection;
-        public MySqlTransaction? Transaction => _transaction;
+        public DbConnection Connection => _connection;
+        public DbTransaction? Transaction => _transaction;
 
         public bool HasActiveTransaction => _transaction != null;
 

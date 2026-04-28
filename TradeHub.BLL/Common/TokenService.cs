@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
@@ -29,6 +29,7 @@ namespace TradeHub.BLL.Common
             new Claim(ClaimTypes.NameIdentifier, tokenRequest.UserId.ToString()),
             new Claim(ClaimTypes.Name, tokenRequest.Name),
             new Claim(JwtRegisteredClaimNames.Email, tokenRequest.Email),
+            new Claim(ClaimTypes.Role, tokenRequest.Role),
 
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(JwtRegisteredClaimNames.Iat,

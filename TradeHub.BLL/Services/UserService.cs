@@ -1,4 +1,4 @@
-﻿using TradeHub.BLL.Common;
+using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
@@ -18,7 +18,7 @@ namespace TradeHub.BLL.Services
 
         // ===== PUBLIC / AUTH (Đăng ký & Tìm kiếm chung) =====
 
-        public async Task<long> RegisterAsync(CreateUserRequest request) // Bỏ User vì đã ở trong UserService
+        public async Task<long> RegisterAsync(CreateUserRequest request)
         {
             var existingUser = await _userRepo.GetByEmailAsync(request.Email);
 
@@ -27,12 +27,9 @@ namespace TradeHub.BLL.Services
 
             var user = new User
             {
-                Name = request.Name,
+                Username = request.Name, // Map Name sang Username
                 Email = request.Email,
-                PasswordHash = request.Password, // Lưu ý: Sau này nhớ Hash mật khẩu nhé Khoa
-                Phone = "",
-                Address = "",
-                AvatarUrl = "",
+                PasswordHash = request.Password, // Lưu ý: Cần Hash mật khẩu trong thực tế
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -44,11 +41,10 @@ namespace TradeHub.BLL.Services
             return await _userRepo.GetByEmailAsync(email);
         }
 
-        // ===== PERSONAL (Hành động của Tôi - Giữ 'My' cho Read, bỏ cho Action) =====
+        // ===== PERSONAL (Hành động của Tôi) =====
 
         public async Task<User> GetMyProfileAsync()
         {
-            // Tận dụng hàm Internal bên dưới
             return await GetByIdInternalAsync(CurrentUserId);
         }
 
