@@ -64,6 +64,7 @@ Sau khi viết xong, Agent **PHẢI tự kiểm tra** các điểm sau trước 
 - [ ] Naming convention có đúng PascalCase/camelCase theo quy định chưa?
 - [ ] Có dùng sai method Dapper không? (Ví dụ: Dùng `Query` khi chỉ cần `Execute`)
 - [ ] Có bỏ sót rule nào từ `learning.md` đã xác định ở Bước 1 không?
+- [ ] Comment đã viết theo chuẩn "WHY thay vì WHAT" và đủ rõ ràng, chuyên nghiệp cho các Agent khác đọc chưa?
 
 ---
 
