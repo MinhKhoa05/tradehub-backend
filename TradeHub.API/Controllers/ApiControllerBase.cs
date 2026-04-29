@@ -46,25 +46,6 @@ namespace TradeHub.API.Controllers
             return StatusCode(201, ApiResponse.Ok(data, message));
         }
 
-        protected IActionResult ApiResult(ServiceResult result)
-        {
-            if (result.IsSuccess)
-            {
-                return Ok(ApiResponse.Ok(result.Data, result.Message));
-            }
-
-            var statusCode = result.ErrorCode switch
-            {
-                ServiceErrorCode.NotFound => 404,
-                ServiceErrorCode.Unauthorized => 401,
-                ServiceErrorCode.Forbidden => 403,
-                ServiceErrorCode.InternalError => 500,
-                _ => 400
-            };
-
-            return StatusCode(statusCode, ApiResponse.Fail(result.Message));
-        }
-
         protected IActionResult ApiNoContent()
         {
             return NoContent();

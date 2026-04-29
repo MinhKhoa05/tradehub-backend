@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TradeHub.BLL.Services;
+using TradeHub.BLL.DTOs.Wallets;
 
 namespace TradeHub.API.Controllers
 {
@@ -33,22 +34,22 @@ namespace TradeHub.API.Controllers
         [HttpPost("transactions/deposit")]
         public async Task<IActionResult> Deposit([FromBody] int amount)
         {
-            var transactionId = await _wallet.DepositAsync(CurrentUser, amount);
-            return ApiOk(new { TransactionId = transactionId }, "Nạp tiền thành công.");
+            var response = await _wallet.DepositAsync(CurrentUser, amount);
+            return ApiOk(response, "Nạp tiền thành công.");
         }
 
         [HttpPost("transactions/withdraw")]
         public async Task<IActionResult> Withdraw([FromBody] int amount)
         {
-            var transactionId = await _wallet.WithdrawAsync(CurrentUser, amount);
-            return ApiOk(new { TransactionId = transactionId }, "Rút tiền thành công.");
+            var response = await _wallet.WithdrawAsync(CurrentUser, amount);
+            return ApiOk(response, "Rút tiền thành công.");
         }
 
         [HttpPost("pay")]
         public async Task<IActionResult> Pay([FromBody] PayRequest request)
         {
-            var transactionId = await _wallet.PayForOrdersAsync(CurrentUser, request.OrderIds, request.TotalAmount);
-            return ApiOk(new { TransactionId = transactionId }, "Thanh toán đơn hàng thành công.");
+            var response = await _wallet.PayForOrdersAsync(CurrentUser, request.OrderIds, request.TotalAmount);
+            return ApiOk(response, "Thanh toán đơn hàng thành công.");
         }
     }
 

@@ -26,13 +26,7 @@ namespace TradeHub.API.Controllers
         {
             // Truyền UserContext để đảm bảo tính minh bạch và khả năng tái sử dụng logic
             var result = await _orderUseCase.CheckoutAsync(CurrentUser, request.GameAccountInfo);
-            
-            if (!result.IsSuccess)
-            {
-                return BadRequest(result);
-            }
-
-            return ApiOk(result.Data, result.Message);
+            return ApiOk(result, "Đặt hàng thành công!");
         }
 
         [HttpGet("me")]

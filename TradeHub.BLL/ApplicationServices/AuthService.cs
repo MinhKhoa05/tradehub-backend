@@ -27,7 +27,7 @@ namespace TradeHub.BLL.ApplicationServices
             await _user.RegisterAsync(request);
         }
 
-        public async Task<string> LoginAsync(LoginRequest request)
+        public async Task<LoginResponseDTO> LoginAsync(LoginRequest request)
         {
             var user = await _user.GetByEmailAsync(request.Email);
             
@@ -36,13 +36,15 @@ namespace TradeHub.BLL.ApplicationServices
                 throw new BusinessException("Email hoặc mật khẩu không chính xác.");
             }
 
-            return _token.GenerateAccessToken(new TokenRequest
+            var token = _token.GenerateAccessToken(new TokenRequest
             {
                 UserId = user.Id,
                 Email = user.Email,
                 Name = user.Username,
                 Role = user.Role.ToString()
             });
+
+            return new LoginResponseDTO { AccessToken = token };
         }
 
         public async Task ChangePasswordAsync(UserContext context, PasswordChangeRequest request)

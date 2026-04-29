@@ -1,8 +1,10 @@
 using TradeHub.BLL.Common;
 using TradeHub.BLL.Services;
+using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.DTOs;
+using TradeHub.BLL.DTOs.Orders;
 
 namespace TradeHub.BLL.ApplicationServices
 {
@@ -35,38 +37,30 @@ namespace TradeHub.BLL.ApplicationServices
         /// Sử dụng Transaction để đảm bảo nếu bất kỳ bước nào thất bại, tiền của khách hàng sẽ không bị mất
         /// và giỏ hàng không bị xóa oan.
         /// </summary>
-        public async Task<ServiceResult> CheckoutAsync(UserContext context, string gameAccountInfo)
+        public async Task<CheckoutResponseDTO> CheckoutAsync(UserContext context, string gameAccountInfo)
         {
-            try
+            var cartItems = await _cartService.GetDetailsAsync(context);
+            if (cartItems == null || !cartItems.Any())
             {
-                var cartItems = await _cartService.GetDetailsAsync(context);
-                if (cartItems == null || !cartItems.Any())
-                {
-                    return ServiceResult.Failure("Giỏ hàng của bạn đang trống.");
-                }
-
-                decimal totalAmount = cartItems.Sum(item => item.Price * item.Quantity);
-
-                // Thực hiện toàn bộ logic trong Transaction để đảm bảo tính Atomicity (Tất cả hoặc không gì cả)
-                return await _database.ExecuteInTransactionAsync(async () =>
-                {
-                    // 1. Trừ tiền trước để xác thực khả năng thanh toán
-                    var transactionId = await _walletService.DeductMoneyAsync(context, totalAmount, "Thanh toán đơn hàng từ giỏ hàng.");
-                    
-                    // 2. Tạo các bản ghi đơn hàng tương ứng
-                    var orderIds = await CreateOrdersFromCartAsync(context, cartItems, gameAccountInfo, transactionId);
-                    
-                    // 3. Xóa giỏ hàng sau khi đã đặt hàng thành công
-                    await _cartService.ClearAsync(context);
-
-                    return ServiceResult.Success("Đặt hàng thành công!", new { OrderIds = orderIds, TransactionId = transactionId });
-                });
+                throw new BusinessException("Giỏ hàng của bạn đang trống.");
             }
-            catch (Exception ex)
+
+            decimal totalAmount = cartItems.Sum(item => item.Price * item.Quantity);
+
+            // Thực hiện toàn bộ logic trong Transaction để đảm bảo tính Atomicity (Tất cả hoặc không gì cả)
+            return await _database.ExecuteInTransactionAsync(async () =>
             {
-                // Log exception if necessary
-                return ServiceResult.Failure($"Quá trình thanh toán gặp lỗi: {ex.Message}");
-            }
+                // 1. Trừ tiền trước để xác thực khả năng thanh toán
+                var txResult = await _walletService.DeductMoneyAsync(context, totalAmount, "Thanh toán đơn hàng từ giỏ hàng.");
+                
+                // 2. Tạo các bản ghi đơn hàng tương ứng
+                var orderIds = await CreateOrdersFromCartAsync(context, cartItems, gameAccountInfo, txResult.TransactionId);
+                
+                // 3. Xóa giỏ hàng sau khi đã đặt hàng thành công
+                await _cartService.ClearAsync(context);
+
+                return new CheckoutResponseDTO { OrderIds = orderIds, TransactionId = txResult.TransactionId };
+            });
         }
 
         /// <summary>

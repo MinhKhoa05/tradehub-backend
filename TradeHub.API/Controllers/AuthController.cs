@@ -27,7 +27,7 @@ namespace TradeHub.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequest loginRequest)
         {
-            string token = await _auth.LoginAsync(loginRequest);
+            var loginResponse = await _auth.LoginAsync(loginRequest);
 
             // Cấu hình Cookie để tăng tính bảo mật (HttpOnly)
             var cookieOptions = new CookieOptions
@@ -40,10 +40,10 @@ namespace TradeHub.API.Controllers
 
             if (!Response.HasStarted)
             {
-                Response.Cookies.Append("accessToken", token, cookieOptions);
+                Response.Cookies.Append("accessToken", loginResponse.AccessToken, cookieOptions);
             }
 
-            return ApiOk(new { accessToken = token }, "Đăng nhập thành công.");
+            return ApiOk(loginResponse, "Đăng nhập thành công.");
         }
 
         [Authorize]

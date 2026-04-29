@@ -4,6 +4,7 @@ using TradeHub.DAL;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories;
 using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.BLL.DTOs.Wallets;
 
 namespace TradeHub.BLL.Services
 {
@@ -25,7 +26,7 @@ namespace TradeHub.BLL.Services
         /// Cần thực hiện trừ tiền trước khi tạo đơn hàng để đảm bảo khách hàng đủ khả năng thanh toán, 
         /// tránh tình trạng giữ hàng ảo hoặc tạo đơn hàng lỗi do thiếu vốn.
         /// </summary>
-        public async Task<long> DeductMoneyAsync(UserContext context, decimal amount, string description)
+        public async Task<TransactionResponseDTO> DeductMoneyAsync(UserContext context, decimal amount, string description)
         {
             if (amount <= 0)
             {
@@ -61,11 +62,11 @@ namespace TradeHub.BLL.Services
                     CreatedAt = DateTime.UtcNow
                 });
 
-                return txId;
+                return new TransactionResponseDTO { TransactionId = txId };
             });
         }
 
-        public async Task<long> RefundMoneyAsync(UserContext context, decimal amount, string description)
+        public async Task<TransactionResponseDTO> RefundMoneyAsync(UserContext context, decimal amount, string description)
         {
             var user = await _userRepo.GetByIdAsync(context.UserId);
             if (user == null)
@@ -77,7 +78,7 @@ namespace TradeHub.BLL.Services
             {
                 await _userRepo.IncreaseBalanceAsync(context.UserId, amount);
                 
-                return await _walletTxRepo.CreateAsync(new WalletTransaction
+                var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = amount,
@@ -86,6 +87,7 @@ namespace TradeHub.BLL.Services
                     Description = description,
                     CreatedAt = DateTime.UtcNow
                 });
+                return new TransactionResponseDTO { TransactionId = txId };
             });
         }
 
@@ -100,7 +102,7 @@ namespace TradeHub.BLL.Services
             return await _walletTxRepo.GetByUserIdAsync(context.UserId);
         }
 
-        public async Task<long> DepositAsync(UserContext context, int amount)
+        public async Task<TransactionResponseDTO> DepositAsync(UserContext context, int amount)
         {
             var user = await _userRepo.GetByIdAsync(context.UserId);
             if (user == null)
@@ -112,7 +114,7 @@ namespace TradeHub.BLL.Services
             {
                 await _userRepo.IncreaseBalanceAsync(context.UserId, (decimal)amount);
                 
-                return await _walletTxRepo.CreateAsync(new WalletTransaction
+                var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = amount,
@@ -121,10 +123,11 @@ namespace TradeHub.BLL.Services
                     Description = $"Nạp tiền vào ví: {amount:N0} VNĐ",
                     CreatedAt = DateTime.UtcNow
                 });
+                return new TransactionResponseDTO { TransactionId = txId };
             });
         }
 
-        public async Task<long> WithdrawAsync(UserContext context, int amount)
+        public async Task<TransactionResponseDTO> WithdrawAsync(UserContext context, int amount)
         {
             var user = await _userRepo.GetByIdAsync(context.UserId);
             if (user == null)
@@ -141,7 +144,7 @@ namespace TradeHub.BLL.Services
             {
                 await _userRepo.DecreaseBalanceAsync(context.UserId, (decimal)amount);
                 
-                return await _walletTxRepo.CreateAsync(new WalletTransaction
+                var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = -amount,
@@ -150,10 +153,11 @@ namespace TradeHub.BLL.Services
                     Description = $"Rút tiền từ ví: {amount:N0} VNĐ",
                     CreatedAt = DateTime.UtcNow
                 });
+                return new TransactionResponseDTO { TransactionId = txId };
             });
         }
 
-        public async Task<long> PayForOrdersAsync(UserContext context, List<long> orderIds, int totalAmount)
+        public async Task<TransactionResponseDTO> PayForOrdersAsync(UserContext context, List<long> orderIds, int totalAmount)
         {
             var description = $"Thanh toán đơn hàng: {string.Join(", ", orderIds)}";
             return await DeductMoneyAsync(context, (decimal)totalAmount, description);

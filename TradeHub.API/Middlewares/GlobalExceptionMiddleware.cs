@@ -51,9 +51,13 @@ namespace TradeHub.API.Middlewares
             {
                 statusCode = HttpStatusCode.NotFound;
             }
-            else if (ex is UnauthorizedAccessException)
+            else if (ex is UnauthorizedException || ex is UnauthorizedAccessException)
             {
                 statusCode = HttpStatusCode.Unauthorized;
+            }
+            else if (ex is ForbiddenException)
+            {
+                statusCode = HttpStatusCode.Forbidden;
             }
             else if (ex is BusinessException)
             {
