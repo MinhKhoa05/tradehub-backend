@@ -418,4 +418,5 @@ FodyWeavers.xsd
 *.msp
 
 # other
-promts/
+.aisystem/learning.md
+.aisystem/memory.md
