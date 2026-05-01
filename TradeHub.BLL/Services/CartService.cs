@@ -33,7 +33,7 @@ namespace TradeHub.BLL.Services
         {
             if (request.Quantity <= 0)
             {
-                throw new BusinessException("Số lượng sản phẩm phải lớn hơn 0.");
+                throw new BusinessException("Số lượng gói phải lớn hơn 0.");
             }
 
             var cartItem = await _cartItemRepo.GetByUserPackageAsync(context.UserId, request.ProductId);
