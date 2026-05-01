@@ -417,6 +417,5 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-# other
-.aisystem/learning.md
-.aisystem/memory.md
+# AI Assistant
+.ai-assistant/agents/readme-maintainer.md
