@@ -3,6 +3,7 @@ using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Utils;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories.Interfaces;
+using Mapster;
 
 namespace TradeHub.BLL.Services
 {
@@ -32,7 +33,7 @@ namespace TradeHub.BLL.Services
             var package = await _packageRepo.GetByIdAsync(id);
             if (package == null)
             {
-                throw new BusinessException("Gói nạp (Game Package) không tồn tại trong hệ thống.");
+                throw new NotFoundException("Gói nạp không tồn tại.");
             }
             return package;
         }
@@ -42,7 +43,7 @@ namespace TradeHub.BLL.Services
             var game = await _gameRepo.GetByIdAsync(request.GameId);
             if (game == null)
             {
-                throw new BusinessException("Game được chọn không tồn tại.");
+                throw new NotFoundException("Game không tồn tại.");
             }
 
             if (!game.IsActive)
@@ -71,37 +72,7 @@ namespace TradeHub.BLL.Services
         public async Task<GamePackage> UpdatePackageAsync(long id, UpdateGamePackageRequest request)
         {
             var package = await GetPackageByIdAsync(id);
-            
-            if (request.Name != null)
-            {
-                package.Name = request.Name;
-                package.NormalizedName = NormalizeName.Normalize(request.Name);
-            }
-            if (request.ImageUrl != null)
-            {
-                package.ImageUrl = request.ImageUrl;
-            }
-            if (request.SalePrice.HasValue)
-            {
-                package.SalePrice = request.SalePrice.Value;
-            }
-            if (request.OriginalPrice.HasValue)
-            {
-                package.OriginalPrice = request.OriginalPrice.Value;
-            }
-            if (request.ImportPrice.HasValue)
-            {
-                package.ImportPrice = request.ImportPrice.Value;
-            }
-            if (request.PackageBudget.HasValue)
-            {
-                package.PackageBudget = request.PackageBudget.Value;
-            }
-            if (request.IsActive.HasValue)
-            {
-                package.IsActive = request.IsActive.Value;
-            }
-
+            request.Adapt(package);
             await _packageRepo.UpdateAsync(package);
             return package;
         }

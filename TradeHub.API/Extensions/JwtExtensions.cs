@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using TradeHub.BLL.Configurations;
+using TradeHub.BLL.Config;
 
 namespace TradeHub.API.Extensions
 {

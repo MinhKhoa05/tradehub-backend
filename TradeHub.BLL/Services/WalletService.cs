@@ -10,11 +10,11 @@ namespace TradeHub.BLL.Services
 {
     public class WalletService
     {
-        private readonly UserRepository _userRepo;
+        private readonly IUserRepository _userRepo;
         private readonly IWalletTransactionRepository _walletTxRepo;
         private readonly DatabaseContext _database;
 
-        public WalletService(UserRepository userRepo, IWalletTransactionRepository walletTxRepo, DatabaseContext database)
+        public WalletService(IUserRepository userRepo, IWalletTransactionRepository walletTxRepo, DatabaseContext database)
         {
             _userRepo = userRepo;
             _walletTxRepo = walletTxRepo;

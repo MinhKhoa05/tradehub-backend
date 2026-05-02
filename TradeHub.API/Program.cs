@@ -5,12 +5,12 @@ using TradeHub.API.Filters;
 using TradeHub.API.Middlewares;
 using TradeHub.BLL.ApplicationServices;
 using TradeHub.BLL.Common;
-using TradeHub.BLL.Configurations;
 using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Queries;
 using TradeHub.DAL.Repositories;
 using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.BLL.Config;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,7 +87,7 @@ builder.Services.AddScoped<DatabaseContext>(sp =>
 });
 
 // ================= REPOSITORIES =================
-builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<CartItemRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderHistoryRepository, OrderHistoryRepository>();
@@ -116,6 +116,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddScoped<PasswordService>();
+
+// ================= MAPSTER =================
+MapsterConfig.RegisterMappings();
 
 var app = builder.Build();
 

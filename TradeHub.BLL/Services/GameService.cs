@@ -2,6 +2,7 @@ using TradeHub.BLL.DTOs.Games;
 using TradeHub.BLL.Exceptions;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories.Interfaces;
+using Mapster;
 
 namespace TradeHub.BLL.Services
 {
@@ -21,11 +22,7 @@ namespace TradeHub.BLL.Services
 
         public async Task<Game> GetGameByIdAsync(long id)
         {
-            var game = await _gameRepo.GetByIdAsync(id);
-            if (game == null)
-            {
-                throw new BusinessException("Game không tồn tại trong hệ thống.");
-            }
+            var game = await _gameRepo.GetByIdAsync(id) ?? throw new NotFoundException("Game không tồn tại.");
             return game;
         }
 
@@ -45,20 +42,7 @@ namespace TradeHub.BLL.Services
         public async Task<Game> UpdateGameAsync(long id, UpdateGameRequest request)
         {
             var game = await GetGameByIdAsync(id);
-            
-            if (request.Name != null) 
-            {
-                game.Name = request.Name;
-            }
-            if (request.ImageUrl != null) 
-            {
-                game.ImageUrl = request.ImageUrl;
-            }
-            if (request.IsActive.HasValue) 
-            {
-                game.IsActive = request.IsActive.Value;
-            }
-
+            request.Adapt(game);
             await _gameRepo.UpdateAsync(game);
             return game;
         }

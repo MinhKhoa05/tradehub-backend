@@ -109,13 +109,13 @@ namespace TradeHub.DAL
 
         #endregion
 
-        public async ValueTask DisposeAsync()
+        public virtual async ValueTask DisposeAsync()
         {
             if (_transaction != null) await _transaction.DisposeAsync();
             if (_connection != null) await _connection.DisposeAsync();
         }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             _transaction?.Dispose();
             _connection?.Dispose();

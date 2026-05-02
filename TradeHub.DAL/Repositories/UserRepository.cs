@@ -1,4 +1,5 @@
 using TradeHub.DAL.Entities;
+using TradeHub.DAL.Repositories.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {
@@ -6,7 +7,7 @@ namespace TradeHub.DAL.Repositories
     /// Repository quản lý thông tin người dùng và số dư ví.
     /// Đây là một trong những Repository quan trọng nhất liên quan đến tài chính.
     /// </summary>
-    public class UserRepository
+    public class UserRepository : IUserRepository
     {
         private readonly DatabaseContext _database;
 
@@ -53,11 +54,34 @@ namespace TradeHub.DAL.Repositories
 
         public async Task<int> UpdateAsync(User user)
         {
+            user.UpdatedAt = DateTime.UtcNow;
             string sql = @"UPDATE users 
-                           SET username = @Username, email = @Email, role = @Role, is_active = @IsActive
+                           SET username = @Username, email = @Email, role = @Role, is_active = @IsActive, updated_at = @UpdatedAt
                            WHERE id = @Id";
             
             return await _database.ExecuteAsync(sql, user);
+        }
+
+        public async Task<IEnumerable<User>> GetAllAsync(int page, int pageSize)
+        {
+            int offset = (page - 1) * pageSize;
+            string sql = "SELECT * FROM users ORDER BY created_at DESC LIMIT @Limit OFFSET @Offset";
+            
+            return await _database.QueryAsync<User>(sql, new 
+            { 
+                Limit = pageSize, 
+                Offset = offset 
+            });
+        }
+
+        public async Task<int> DeleteAsync(long userId)
+        {
+            string sql = "UPDATE users SET is_active = 0 WHERE id = @UserId";
+            
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                UserId = userId 
+            });
         }
 
         public async Task<int> IncreaseBalanceAsync(long userId, decimal amount)
