@@ -1,5 +1,5 @@
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {

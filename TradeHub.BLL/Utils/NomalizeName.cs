@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -27,7 +27,7 @@ namespace TradeHub.BLL.Utils
 
             string result = sb.ToString().Normalize(NormalizationForm.FormC);
 
-            result = result.Replace("đ", "d");
+            result = result.Replace("d", "d");
 
             result = Regex.Replace(result, @"\s+", " ").Trim();
 

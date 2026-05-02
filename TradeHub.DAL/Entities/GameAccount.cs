@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TradeHub.DAL.Entities
@@ -7,21 +7,21 @@ namespace TradeHub.DAL.Entities
     public class GameAccount
     {
         [Key]
-        public long Id { get; set; } // Dùng long cho đồng bộ với các bảng khác
+        public long Id { get; set; } // D�ng long cho d?ng b? v?i c�c b?ng kh�c
 
-        public long UserId { get; set; } // Chủ sở hữu sổ địa chỉ này
+        public long UserId { get; set; } // Ch? s? h?u s? d?a ch? n�y
 
         public long GameId { get; set; } // "freefire", "pubg"...
 
-        public string Name { get; set; } = null!; // Tên gợi nhớ (ví dụ: "Acc chính của em")
+        public string Name { get; set; } = null!; // T�n g?i nh? (v� d?: "Acc ch�nh c?a em")
 
-        public string AccountIdentifier { get; set; } = null!; // ID TRONG GAME (Ví dụ: 88776655)
+        public string AccountIdentifier { get; set; } = null!; // ID TRONG GAME (V� d?: 88776655)
 
-        public string? Server { get; set; } // Server (nếu có)
+        public string? Server { get; set; } // Server (n?u c�)
 
-        public string? Description { get; set; } // Ghi chú thêm
+        public string? Description { get; set; } // Ghi ch� th�m
 
-        public bool IsDefault { get; set; } = false; // Ưu tiên chọn nhanh
+        public bool IsDefault { get; set; } = false; // Uu ti�n ch?n nhanh
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

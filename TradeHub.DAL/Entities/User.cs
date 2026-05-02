@@ -15,8 +15,6 @@ namespace TradeHub.DAL.Entities
 
         public string PasswordHash { get; set; } = null!;
 
-        public decimal Balance { get; set; } = 0;
-
         public UserRole Role { get; set; } = UserRole.Member;
 
         public bool IsActive { get; set; } = true;

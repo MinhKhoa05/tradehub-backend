@@ -1,5 +1,5 @@
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 
 namespace TradeHub.DAL.Repositories
 {
@@ -84,31 +84,5 @@ namespace TradeHub.DAL.Repositories
             });
         }
 
-        public async Task<int> IncreaseBalanceAsync(long userId, decimal amount)
-        {
-            var sql = "UPDATE users SET balance = balance + @Amount WHERE id = @UserId";
-            
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                UserId = userId, 
-                Amount = amount 
-            });
-        }
-
-        /// <summary>
-        /// Trừ tiền trong ví người dùng. 
-        /// Ràng buộc balance >= @Amount ngay trong câu lệnh SQL để đảm bảo tính nhất quán 
-        /// và tránh lỗi Race Condition khi có nhiều yêu cầu trừ tiền đồng thời.
-        /// </summary>
-        public async Task<int> DecreaseBalanceAsync(long userId, decimal amount)
-        {
-            var sql = "UPDATE users SET balance = balance - @Amount WHERE id = @UserId AND balance >= @Amount";
-            
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                UserId = userId, 
-                Amount = amount 
-            });
-        }
     }
 }

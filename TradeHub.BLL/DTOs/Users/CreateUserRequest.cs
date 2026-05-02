@@ -1,19 +1,19 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace TradeHub.BLL.DTOs.Users
 {
     public class CreateUserRequest
     {
-        [Required(ErrorMessage = "Tên không được để trống")]
-        [StringLength(50, MinimumLength = 3, ErrorMessage = "Tên phải từ 3 -> 50 ký tự")]
+        [Required(ErrorMessage = "T�n kh�ng du?c d? tr?ng")]
+        [StringLength(50, MinimumLength = 3, ErrorMessage = "T�n ph?i t? 3 -> 50 k� t?")]
         public string Name { get; set; } = null!;
 
-        [Required(ErrorMessage = "Email không được để trống")]
-        [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+        [Required(ErrorMessage = "Email kh�ng du?c d? tr?ng")]
+        [EmailAddress(ErrorMessage = "Email kh�ng h?p l?")]
         public string Email { get; set; } = null!;
 
-        [Required(ErrorMessage = "Mật khẩu không được để trống")]
-        [MinLength(8, ErrorMessage = "Mật khẩu phải ít nhất 8 ký tự")]
+        [Required(ErrorMessage = "M?t kh?u kh�ng du?c d? tr?ng")]
+        [MinLength(8, ErrorMessage = "M?t kh?u ph?i �t nh?t 8 k� t?")]
         public string Password { get; set; } = null!;
 
         // public string Phone { get; set; } = null!;

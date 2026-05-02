@@ -1,6 +1,6 @@
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using TradeHub.BLL.Common;
 
 namespace TradeHub.BLL.Services

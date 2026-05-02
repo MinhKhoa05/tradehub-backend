@@ -6,10 +6,18 @@ START TRANSACTION;
 -- ======================
 -- USERS
 -- ======================
-INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `balance`, `role`) VALUES
-(1, 'admin', 'admin@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 1000000.00, 1),
-(2, 'member1', 'member1@gmail.com', '$2b$10$IQpdSmIDSadCEVqxbua9Q.Agyc5/TrrOkoyp6VNODmfz.kvBJGDvO', 500000.00, 0),
-(3, 'staff1', 'staff1@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 0.00, 2);
+INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`) VALUES
+(1, 'admin', 'admin@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 1),
+(2, 'member1', 'member1@gmail.com', '$2b$10$IQpdSmIDSadCEVqxbua9Q.Agyc5/TrrOkoyp6VNODmfz.kvBJGDvO', 0),
+(3, 'staff1', 'staff1@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 2);
+
+-- ======================
+-- WALLETS
+-- ======================
+INSERT INTO `wallets` (`user_id`, `balance`) VALUES
+(1, 1000000.00),
+(2, 500000.00),
+(3, 0.00);
 
 -- ======================
 -- GAMES

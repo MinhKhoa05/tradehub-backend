@@ -2,8 +2,9 @@ using Mapster;
 using TradeHub.BLL.Common;
 using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.Exceptions;
+using TradeHub.DAL;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 
 namespace TradeHub.BLL.Services
 {

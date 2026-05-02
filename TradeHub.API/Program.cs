@@ -9,7 +9,7 @@ using TradeHub.BLL.Services;
 using TradeHub.DAL;
 using TradeHub.DAL.Queries;
 using TradeHub.DAL.Repositories;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using TradeHub.BLL.Config;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -92,6 +92,7 @@ builder.Services.AddScoped<CartItemRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderHistoryRepository, OrderHistoryRepository>();
 builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IGameRepository, GameRepository>();
 builder.Services.AddScoped<IGamePackageRepository, GamePackageRepository>();
 builder.Services.AddScoped<IGameAccountRepository, GameAccountRepository>();

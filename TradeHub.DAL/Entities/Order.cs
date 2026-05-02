@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TradeHub.DAL.Entities
@@ -20,8 +20,8 @@ namespace TradeHub.DAL.Entities
 
         public decimal Total => UnitPrice * Quantity;
 
-        public long AssignTo { get; set; } // Admin đang nhận xử lý
-        public DateTime AssignAt { get; set; } // Thời điểm admin nhận xử lý
+        public long AssignTo { get; set; } // Admin dang nh?n x? l�
+        public DateTime AssignAt { get; set; } // Th?i di?m admin nh?n x? l�
 
         public OrderStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -30,9 +30,9 @@ namespace TradeHub.DAL.Entities
 
     public enum OrderStatus
     {
-        Pending = 1,        // User đặt hàng
-        Processing = 2,     // Admin đang xử lý
-        Completed = 3,      // Hoàn thành
-        Canacelled = 4      // Hủy đơn
+        Pending = 1,        // User d?t h�ng
+        Processing = 2,     // Admin dang x? l�
+        Completed = 3,      // Ho�n th�nh
+        Canacelled = 4      // H?y don
     }
 }

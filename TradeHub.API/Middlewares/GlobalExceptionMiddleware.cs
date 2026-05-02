@@ -68,7 +68,7 @@ namespace TradeHub.API.Middlewares
 
             // Nếu là lỗi hệ thống (500), ẩn chi tiết lỗi để bảo mật. 
             // Ngược lại, trả về thông báo lỗi nghiệp vụ cụ thể cho người dùng.
-            var message = "Đã xảy ra lỗi không mong muốn trên hệ thống.";
+            var message = "Hệ thống đang bận một chút hoặc có sự cố nhỏ. Bạn vui lòng thử lại sau vài giây nhé!";
             if (statusCode != HttpStatusCode.InternalServerError)
             {
                 message = ex.Message;

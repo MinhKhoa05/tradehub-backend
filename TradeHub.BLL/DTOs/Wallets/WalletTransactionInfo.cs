@@ -1,4 +1,4 @@
-﻿using TradeHub.DAL.Entities;
+using TradeHub.DAL.Entities;
 
 namespace TradeHub.BLL.DTOs.Wallets
 {

@@ -2,7 +2,7 @@ using TradeHub.BLL.DTOs.GamePackages;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Utils;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using Mapster;
 
 namespace TradeHub.BLL.Services

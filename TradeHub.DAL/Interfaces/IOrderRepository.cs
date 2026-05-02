@@ -1,6 +1,6 @@
 using TradeHub.DAL.Entities;
 
-namespace TradeHub.DAL.Repositories.Interfaces
+namespace TradeHub.DAL.Interfaces
 {
     public interface IOrderRepository
     {

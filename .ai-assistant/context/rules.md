@@ -50,9 +50,11 @@ Rules for all AI Agents working on TradeHub Backend. Mandatory.
 - Auto commit/rollback managed by `DatabaseContext`.
 
 ## 5. Service / BLL Rules
-- Service = business orchestration layer. Can call multiple repositories.
+- Service = business orchestration layer.
 - Must NOT contain raw data access logic.
 - Avoid deep service chaining (max 2 levels).
+- **Service Isolation (Data Ownership)**: Each Service may ONLY inject and access its own Repository. Absolutely NO Cross-Repo (injecting a Repository belonging to another domain). See `memory.md [2026-05-02]`.
+- **UseCase Pattern**: When a business flow requires interaction between 2 or more Services, a dedicated `UseCase` or `ApplicationService` MUST be created to orchestrate. Services must NOT call other Services directly.
 
 ## 6. Validation Rules
 - **Controller (Request Validation)**: Only validate syntax and mandatory fields using `DataAnnotations` (e.g., `[Required]`, `[EmailAddress]`).
@@ -109,3 +111,22 @@ Rules for all AI Agents working on TradeHub Backend. Mandatory.
 - **API Deserialization**: Integration tests must use `ApiResponseTestWrapper<T>` to handle wrapped responses.
 - **State Verification**: Tests must verify actual database changes (e.g., checking `IsActive` for soft delete) rather than just asserting HTTP status codes.
 - **Consistency**: All Test Classes must call `MapsterConfig.RegisterMappings()` in their constructor.
+
+## 16. Race Condition Safety
+- **Assume Concurrency**: Always assume Race Conditions can occur at any step, even after a logic check (`if exists`).
+- **DB Constraint as Last Line of Defense**: For any resource creation with a `UNIQUE` constraint, a `try-catch` block MUST be present to handle database-level violations.
+- **Friendly Error**: `UNIQUE`/`Duplicate` exceptions from the database MUST be caught and re-thrown as a `BusinessException` with a user-friendly message before reaching the client.
+
+```csharp
+// Standard Pattern: Logic Check + DB Constraint Safety
+try
+{
+    return await _repo.CreateAsync(entity);
+}
+catch (Exception ex) when (ex.Message.Contains("Duplicate", StringComparison.OrdinalIgnoreCase) ||
+                           ex.Message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase))
+{
+    // Rationale: Race condition safety - DB constraint catches concurrent duplicate creation.
+    throw new BusinessException("This resource already exists or is being processed.");
+}
+```

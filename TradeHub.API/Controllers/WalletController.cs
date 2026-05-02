@@ -17,6 +17,13 @@ namespace TradeHub.API.Controllers
             _wallet = wallet;
         }
 
+        [HttpPost]
+        public async Task<IActionResult> CreateWallet()
+        {
+            var walletId = await _wallet.CreateWalletAsync(CurrentUser);
+            return ApiOk(new { WalletId = walletId }, "Kích hoạt ví thành công.");
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetBalance()
         {

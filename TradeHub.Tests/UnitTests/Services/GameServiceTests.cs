@@ -3,7 +3,7 @@ using TradeHub.BLL.DTOs.Games;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Services;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using Xunit;
 using FluentAssertions;
 using TradeHub.BLL.Config;

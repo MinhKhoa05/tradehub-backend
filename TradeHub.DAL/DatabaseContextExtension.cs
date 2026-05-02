@@ -1,11 +1,11 @@
-﻿using Dapper;
+using Dapper;
 using Dommel;
 
 namespace TradeHub.DAL
 {
     /// <summary>
-    /// Dommel -> CRUD đơn giản
-    /// Dapper -> query phức tạp / partial update
+    /// Dommel -> CRUD don gi?n
+    /// Dapper -> query ph?c t?p / partial update
     /// </summary>
     public static class DatabaseExtensions
     {
@@ -18,7 +18,7 @@ namespace TradeHub.DAL
             return await db.Connection.GetAsync<T>(id, db.Transaction);
         }
 
-        /// <summary>Insert entity đơn giản</summary>
+        /// <summary>Insert entity don gi?n</summary>
         public static async Task<TId?> InsertAsync<T, TId>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
@@ -26,14 +26,14 @@ namespace TradeHub.DAL
             return id is null ? default : (TId)id;
         }
 
-        /// <summary>Update toàn bộ entity</summary>
+        /// <summary>Update to�n b? entity</summary>
         public static async Task<bool> UpdateAsync<T>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
             return await db.Connection.UpdateAsync(entity, db.Transaction);
         }
 
-        /// <summary>Delete đơn giản</summary>
+        /// <summary>Delete don gi?n</summary>
         public static async Task<bool> DeleteAsync<T>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();

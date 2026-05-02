@@ -1,4 +1,4 @@
-﻿namespace TradeHub.DAL.DTOs
+namespace TradeHub.DAL.DTOs
 {
     public class ProductStockUpdate
     {

@@ -1,4 +1,4 @@
-﻿namespace TradeHub.BLL.Config
+namespace TradeHub.BLL.Config
 {
     public class JwtSettings
     {

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace TradeHub.BLL.DTOs.Carts
 {
@@ -6,7 +6,7 @@ namespace TradeHub.BLL.DTOs.Carts
     {
         public int ProductId { get; set; }
 
-        [Range(1, int.MaxValue, ErrorMessage = "Số lượng phải lớn hơn 0")]
+        [Range(1, int.MaxValue, ErrorMessage = "S? lu?ng ph?i l?n hon 0")]
         public int Quantity { get; set; }
     }
 }

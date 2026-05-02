@@ -8,13 +8,23 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    balance DECIMAL(18, 2) DEFAULT 0.00,
     role INT DEFAULT 0, -- 0: Member, 1: Admin, 2: Staff
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_users_username (username),
     INDEX idx_users_created (created_at)
+) ENGINE=InnoDB;
+
+-- 1.1 Table: wallets
+CREATE TABLE IF NOT EXISTS wallets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    balance DECIMAL(18, 2) DEFAULT 0.00,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_wallet_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_wallets_user (user_id)
 ) ENGINE=InnoDB;
 
 -- 2. Table: games

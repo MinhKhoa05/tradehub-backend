@@ -3,22 +3,49 @@ using TradeHub.BLL.Exceptions;
 using TradeHub.DAL;
 using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using TradeHub.BLL.DTOs.Wallets;
 
 namespace TradeHub.BLL.Services
 {
     public class WalletService
     {
-        private readonly IUserRepository _userRepo;
+        private readonly IWalletRepository _walletRepo;
         private readonly IWalletTransactionRepository _walletTxRepo;
         private readonly DatabaseContext _database;
 
-        public WalletService(IUserRepository userRepo, IWalletTransactionRepository walletTxRepo, DatabaseContext database)
+        public WalletService(IWalletRepository walletRepo, IWalletTransactionRepository walletTxRepo, DatabaseContext database)
         {
-            _userRepo = userRepo;
+            _walletRepo = walletRepo;
             _walletTxRepo = walletTxRepo;
             _database = database;
+        }
+
+        public async Task<long> CreateWalletAsync(UserContext context)
+        {
+            var existingWallet = await _walletRepo.GetByUserIdAsync(context.UserId);
+            if (existingWallet != null)
+            {
+                throw new BusinessException("Ví của bạn đã được kích hoạt.");
+            }
+
+            try
+            {
+                return await _walletRepo.CreateAsync(new Wallet
+                {
+                    UserId = context.UserId,
+                    Balance = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex) when (ex.Message.Contains("Duplicate", StringComparison.OrdinalIgnoreCase) || 
+                                      ex.Message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase))
+            {
+                // Rationale: Race condition safety. Even if the check above passes, 
+                // the database constraint will prevent duplicate creation.
+                throw new BusinessException("Ví của bạn đã được kích hoạt hoặc đang được xử lý.");
+            }
         }
 
         /// <summary>
@@ -33,30 +60,27 @@ namespace TradeHub.BLL.Services
                 throw new BusinessException("Số tiền trừ phải lớn hơn 0.");
             }
 
-            var user = await _userRepo.GetByIdAsync(context.UserId);
-            if (user == null)
-            {
-                throw new BusinessException("Người dùng không tồn tại.");
-            }
+            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId) 
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
 
-            if (user.Balance < amount)
+            if (wallet.Balance < amount)
             {
                 throw new BusinessException("Số dư ví không đủ để thực hiện giao dịch này.");
             }
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                var affected = await _userRepo.DecreaseBalanceAsync(context.UserId, amount);
+                var affected = await _walletRepo.DecreaseBalanceAsync(context.UserId, amount);
                 if (affected == 0)
                 {
-                    throw new BusinessException("Không thể cập nhật số dư ví.");
+                    throw new BusinessException("Không thể cập nhật số dư ví hoặc số dư không đủ.");
                 }
 
                 var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = -amount,
-                    BalanceAfter = user.Balance - amount,
+                    BalanceAfter = wallet.Balance - amount,
                     Type = WalletTransactionType.PaidOrder,
                     Description = description,
                     CreatedAt = DateTime.UtcNow
@@ -68,21 +92,18 @@ namespace TradeHub.BLL.Services
 
         public async Task<TransactionResponseDTO> RefundMoneyAsync(UserContext context, decimal amount, string description)
         {
-            var user = await _userRepo.GetByIdAsync(context.UserId);
-            if (user == null)
-            {
-                throw new BusinessException("Người dùng không tồn tại.");
-            }
+            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                await _userRepo.IncreaseBalanceAsync(context.UserId, amount);
+                await _walletRepo.IncreaseBalanceAsync(context.UserId, amount);
                 
                 var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = amount,
-                    BalanceAfter = user.Balance + amount,
+                    BalanceAfter = wallet.Balance + amount,
                     Type = WalletTransactionType.Refund,
                     Description = description,
                     CreatedAt = DateTime.UtcNow
@@ -93,8 +114,9 @@ namespace TradeHub.BLL.Services
 
         public async Task<decimal> GetBalanceAsync(UserContext context)
         {
-            var user = await _userRepo.GetByIdAsync(context.UserId);
-            return user?.Balance ?? 0;
+            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            return wallet.Balance;
         }
 
         public async Task<List<WalletTransaction>> GetTransactionsAsync(UserContext context)
@@ -104,21 +126,18 @@ namespace TradeHub.BLL.Services
 
         public async Task<TransactionResponseDTO> DepositAsync(UserContext context, int amount)
         {
-            var user = await _userRepo.GetByIdAsync(context.UserId);
-            if (user == null)
-            {
-                throw new BusinessException("Người dùng không tồn tại.");
-            }
+            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                await _userRepo.IncreaseBalanceAsync(context.UserId, (decimal)amount);
+                await _walletRepo.IncreaseBalanceAsync(context.UserId, (decimal)amount);
                 
                 var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = amount,
-                    BalanceAfter = user.Balance + amount,
+                    BalanceAfter = wallet.Balance + amount,
                     Type = WalletTransactionType.Deposit,
                     Description = $"Nạp tiền vào ví: {amount:N0} VNĐ",
                     CreatedAt = DateTime.UtcNow
@@ -129,26 +148,27 @@ namespace TradeHub.BLL.Services
 
         public async Task<TransactionResponseDTO> WithdrawAsync(UserContext context, int amount)
         {
-            var user = await _userRepo.GetByIdAsync(context.UserId);
-            if (user == null)
-            {
-                throw new BusinessException("Người dùng không tồn tại.");
-            }
+            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
 
-            if (user.Balance < amount)
+            if (wallet.Balance < amount)
             {
                 throw new BusinessException("Số dư không đủ để thực hiện rút tiền.");
             }
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                await _userRepo.DecreaseBalanceAsync(context.UserId, (decimal)amount);
+                var affected = await _walletRepo.DecreaseBalanceAsync(context.UserId, (decimal)amount);
+                if (affected == 0)
+                {
+                    throw new BusinessException("Không thể cập nhật số dư ví hoặc số dư không đủ.");
+                }
                 
                 var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
                     UserId = context.UserId,
                     Amount = -amount,
-                    BalanceAfter = user.Balance - amount,
+                    BalanceAfter = wallet.Balance - amount,
                     Type = WalletTransactionType.Withdraw,
                     Description = $"Rút tiền từ ví: {amount:N0} VNĐ",
                     CreatedAt = DateTime.UtcNow

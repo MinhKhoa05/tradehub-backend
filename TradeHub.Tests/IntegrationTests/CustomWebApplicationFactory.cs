@@ -52,7 +52,6 @@ namespace TradeHub.Tests.IntegrationTests
                         username TEXT NOT NULL,
                         email TEXT NOT NULL UNIQUE,
                         password_hash TEXT NOT NULL,
-                        balance REAL DEFAULT 0,
                         role INTEGER DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -60,6 +59,16 @@ namespace TradeHub.Tests.IntegrationTests
                     );
                     CREATE INDEX idx_users_username ON users(username);
                     CREATE INDEX idx_users_created ON users(created_at);
+
+                    CREATE TABLE wallets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL UNIQUE,
+                        balance REAL DEFAULT 0,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                    );
+                    CREATE INDEX idx_wallets_user ON wallets(user_id);
 
                     CREATE TABLE games (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,

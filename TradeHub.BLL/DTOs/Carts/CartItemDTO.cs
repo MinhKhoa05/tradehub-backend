@@ -1,4 +1,4 @@
-﻿namespace TradeHub.BLL.DTOs.Carts
+namespace TradeHub.BLL.DTOs.Carts
 {
     public class CartItemDTO
     {

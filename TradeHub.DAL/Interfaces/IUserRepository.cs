@@ -1,6 +1,6 @@
 using TradeHub.DAL.Entities;
 
-namespace TradeHub.DAL.Repositories.Interfaces
+namespace TradeHub.DAL.Interfaces
 {
     public interface IUserRepository
     {
@@ -11,7 +11,5 @@ namespace TradeHub.DAL.Repositories.Interfaces
         Task<int> UpdateAsync(User user);
         Task<IEnumerable<User>> GetAllAsync(int page, int pageSize);
         Task<int> DeleteAsync(long userId);
-        Task<int> IncreaseBalanceAsync(long userId, decimal amount);
-        Task<int> DecreaseBalanceAsync(long userId, decimal amount);
     }
 }

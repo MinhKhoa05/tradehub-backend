@@ -3,7 +3,7 @@ using TradeHub.BLL.DTOs.Users;
 using TradeHub.BLL.Exceptions;
 using TradeHub.BLL.Services;
 using TradeHub.DAL.Entities;
-using TradeHub.DAL.Repositories.Interfaces;
+using TradeHub.DAL.Interfaces;
 using Xunit;
 using FluentAssertions;
 using TradeHub.BLL.Config;
@@ -32,8 +32,8 @@ namespace TradeHub.Tests.UnitTests.Services
             // Arrange
             var users = new List<User>
             {
-                new User { Id = 101, Username = "nguyenvana", Email = "vana@gmail.com", Role = UserRole.Member, Balance = 500000 },
-                new User { Id = 102, Username = "tranvanb", Email = "vanb@yahoo.com", Role = UserRole.Admin, Balance = 0 }
+                new User { Id = 101, Username = "nguyenvana", Email = "vana@gmail.com", Role = UserRole.Member },
+                new User { Id = 102, Username = "tranvanb", Email = "vanb@yahoo.com", Role = UserRole.Admin }
             };
             _userRepoMock.Setup(r => r.GetAllAsync(1, 10)).ReturnsAsync(users);
 
@@ -52,7 +52,7 @@ namespace TradeHub.Tests.UnitTests.Services
         public async Task GetByIdAsync_ShouldReturnDTO_WhenUserExists()
         {
             // Arrange
-            var user = new User { Id = 55, Username = "testuser", Email = "test@tradehub.vn", Balance = 1000 };
+            var user = new User { Id = 55, Username = "testuser", Email = "test@tradehub.vn" };
             _userRepoMock.Setup(r => r.GetByIdAsync(55)).ReturnsAsync(user);
 
             // Act
