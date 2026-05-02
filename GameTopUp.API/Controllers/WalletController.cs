@@ -17,7 +17,7 @@ namespace GameTopUp.API.Controllers
             _wallet = wallet;
         }
 
-        [HttpPost]
+        [HttpPost("active")]
         public async Task<IActionResult> CreateWallet()
         {
             var walletId = await _wallet.CreateWalletAsync(CurrentUser);
@@ -39,30 +39,17 @@ namespace GameTopUp.API.Controllers
         }
 
         [HttpPost("transactions/deposit")]
-        public async Task<IActionResult> Deposit([FromBody] int amount)
+        public async Task<IActionResult> Deposit([FromBody] WalletTransactionRequest request)
         {
-            var response = await _wallet.DepositAsync(CurrentUser, amount);
+            var response = await _wallet.DepositAsync(CurrentUser, request.Amount);
             return ApiOk(response, "Nạp tiền thành công.");
         }
 
         [HttpPost("transactions/withdraw")]
-        public async Task<IActionResult> Withdraw([FromBody] int amount)
+        public async Task<IActionResult> Withdraw([FromBody] WalletTransactionRequest request)
         {
-            var response = await _wallet.WithdrawAsync(CurrentUser, amount);
+            var response = await _wallet.WithdrawAsync(CurrentUser, request.Amount);
             return ApiOk(response, "Rút tiền thành công.");
         }
-
-        [HttpPost("pay")]
-        public async Task<IActionResult> Pay([FromBody] PayRequest request)
-        {
-            var response = await _wallet.PayForOrdersAsync(CurrentUser, request.OrderIds, request.TotalAmount);
-            return ApiOk(response, "Thanh toán đơn hàng thành công.");
-        }
-    }
-
-    public class PayRequest
-    {
-        public List<long> OrderIds { get; set; } = new();
-        public int TotalAmount { get; set; }
     }
 }

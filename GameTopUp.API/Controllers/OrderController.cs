@@ -49,5 +49,13 @@ namespace GameTopUp.API.Controllers
             var order = await _orderService.GetByIdAsync(orderId);
             return ApiOk(order);
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{orderId}/pick")]
+        public async Task<IActionResult> PickOrder(long orderId)
+        {
+            await _orderService.PickOrderAsync(orderId, CurrentUser);
+            return ApiOk(null, "Bạn đã tiếp nhận đơn hàng thành công.");
+        }
     }
 }

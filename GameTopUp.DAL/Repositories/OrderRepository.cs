@@ -107,5 +107,28 @@ namespace GameTopUp.DAL.Repositories
                 Status = newStatus 
             });
         }
+
+        public async Task<int> PickOrderAsync(long orderId, long adminId)
+        {
+            // Sử dụng WHERE status = @PendingStatus VÀ (assign_to = 0 OR assign_to IS NULL)
+            // để đảm bảo tính nguyên tử (Atomic), chặn Race Condition nếu 2 Admin cùng nhấn 'Nhận đơn' cùng lúc.
+            var sql = @"
+                UPDATE orders 
+                SET status = @ProcessingStatus, 
+                    assign_to = @AdminId, 
+                    assign_at = CURRENT_TIMESTAMP, 
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE id = @OrderId 
+                AND status = @PendingStatus 
+                AND (assign_to = 0 OR assign_to IS NULL)";
+
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                OrderId = orderId, 
+                AdminId = adminId,
+                ProcessingStatus = OrderStatus.Processing,
+                PendingStatus = OrderStatus.Pending
+            });
+        }
     }
 }
