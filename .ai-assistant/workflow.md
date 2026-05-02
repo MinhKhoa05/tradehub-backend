@@ -23,11 +23,16 @@ Multi-agent AI system with strict role separation, approval gating, and scope lo
 
 **PLAN RULE**
 
-ARCHITECT must create:
-`.ai-assistant/plans/PLAN.md`
+ARCHITECT must create a new file for each task:
+`.ai-assistant/plans/PLAN-{topic}-{subtopic}.md` 
+Example: 
+- `PLAN-UserManagement-API.md`
+- `PLAN-UserManagement-Testing.md`
+*Note: Do NOT overwrite existing PLAN files.*
 
 Must include:
 - Objective
+- Reference Memory (Confirm check of `memory.md` & `rules.md`)
 - File changes (Create / Modify / Delete)
 - Impact / Risk
 

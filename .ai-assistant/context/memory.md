@@ -1,84 +1,75 @@
-# System Memory & Learning Log
+﻿# System Memory & Learning Log
 
-Tài liệu này lưu vết các vấn đề gặp phải và bài học kinh nghiệm dưới dạng nhật ký. 
-
-*(Lưu ý: Các mục đã được định hình thành cấu trúc bắt buộc hoặc quy chuẩn hệ thống trong `rules.md` đã được lược bỏ để tập trung vào các vấn đề/kinh nghiệm cụ thể).*
+Tài liệu này lưu vết các vấn đề gặp phải, bài học kinh nghiệm và các quyết định kiến trúc quan trọng trong quá trình phát triển TradeHub.
 
 ---
 
-## [2026-04-28]
+## 🚨 Critical Infrastructure Constraints
+*Các ràng buộc hạ tầng bắt buộc phải tuân thủ để đảm bảo hệ thống vận hành ổn định.*
 
-### Vấn đề:
-Lỗi 500 Internal Server Error khi chạy Integration Tests diện rộng.
-
-### Nguyên nhân:
-Schema SQLite trong `CustomWebApplicationFactory` không khớp với POCO entities. Thiếu các trường audit (`is_active`, `created_at`, `updated_at`) và trường `normalized_name`. Ngoài ra, SQLite yêu cầu ánh xạ chính xác giữa PascalCase (C#) và snake_case (SQL).
-
-### Giải pháp:
-- Cập nhật script khởi tạo SQLite trong bộ test để bao gồm đầy đủ các cột.
-- Thực hiện chuẩn hóa dữ liệu (case normalization) ngay trong logic seeding của test.
-- Đảm bảo mapping `DefaultTypeMap.MatchNamesWithUnderscores = true` được kích hoạt trong môi trường test.
+- **SQLite In-memory Lifecycle**: Database in-memory (`:memory:`) sẽ bị xóa ngay khi connection bị đóng. Phải sử dụng `TestDatabaseContext` ghi đè `Dispose` để giữ connection mở trong suốt vòng đời của Test Suite.
+- **DI BuildServiceProvider Issue**: Tuyệt đối không gọi `services.BuildServiceProvider()` bên trong `ConfigureWebHost` vì sẽ tạo ra các bản sao provider riêng biệt, gây sai lệch về quản lý Singleton/Scoped services.
+- **Audit Schema Sync**: Mọi thay đổi về Audit Fields (created_at, updated_at, is_active) trong Entity phải được cập nhật tương ứng vào script khởi tạo SQLite trong bộ test.
 
 ---
 
-## [2026-04-29]
+## 📅 Chronological Logs
 
-### Chủ đề:
-Tối ưu hóa tìm kiếm với Name Normalization.
+### [2026-04-28]
+**Topic: Schema Synchronization & Audit Columns**
+- **Type**: Bug Fix
+- **Tags**: [testing] [sqlite] [sql] [audit]
+- **Scope**: Integration Tests, DAL
+- **Impact**: Loại bỏ hoàn toàn lỗi 500 (No such column/table) trong môi trường CI/CD và Integration Test.
 
-### Tags:
-[sql] [performance] [search] [database]
-
-### Context:
-Tăng tốc độ truy vấn và giải quyết vấn đề Case-Sensitivity trong tìm kiếm chuỗi.
-
-### Rule rút ra:
-- Luôn chuẩn bị sẵn, lưu trữ và truy vấn trên cột `normalized_name` (đã trim và lowercase).
-- Thực hiện chuẩn hóa dữ liệu đầu vào (search term) trước khi thực hiện câu lệnh `LIKE`.
-
-### Áp dụng khi:
-- Tìm kiếm Game, GamePackage, User theo tên.
-- Các tính năng lọc (Filter) dữ liệu dựa trên chuỗi ký tự.
-
-### Tránh:
-- Tuyệt đối tránh sử dụng hàm SQL `LOWER()` hoặc `UPPER()` trong mệnh đề `WHERE` vì sẽ làm vô hiệu hóa Database Index trên cột tương ứng.
-
-### Ví dụ:
-```sql
-SELECT * FROM game_packages WHERE normalized_name LIKE @SearchTerm;
-```
+**Bài học rút ra**:
+- Script `CREATE TABLE` trong `CustomWebApplicationFactory.cs` phải là "Single Source of Truth" cho schema in-memory.
+- Đảm bảo mapping `MatchNamesWithUnderscores = true` để đồng bộ PascalCase và snake_case.
 
 ---
 
-## [2026-04-29]
+### [2026-04-29]
+**Topic: Search Optimization & Coding Style**
+- **Type**: Architecture Decision / Best Practice
+- **Tags**: [sql] [performance] [search] [coding-style]
+- **Scope**: DAL, BLL (Service Layer)
+- **Impact**: Tối ưu tốc độ tìm kiếm, tránh table scan trong production và tăng khả năng bảo trì mã nguồn.
 
-### Chủ đề:
-Coding Style: Explicit Blocks vs Expression-bodied Members.
+**Bài học rút ra**:
+- **Normalization**: Luôn truy vấn trên cột `normalized_name` đã được xử lý (lowercase, no accent). Tuyệt đối không dùng `LOWER()` trong `WHERE` để bảo toàn Database Index.
+- **Explicit Logic**: Ưu tiên khối mã `{ ... }` và `Rationale` cho logic phức tạp. Tránh lạm dụng expression-bodied (`=>`) cho các tác vụ quan trọng.
 
-### Tags:
-[coding-style] [readability] [maintenance]
+---
 
-### Context:
-Duy trì tính minh bạch và khả năng mở rộng của mã nguồn.
+### [2026-05-02]
+**Topic: User Management, Mapster & Test Suite Refactor**
+- **Type**: Architecture Decision / Best Practice
+- **Tags**: [mapster] [user-management] [soft-delete] [testing] [api-response]
+- **Scope**: API Layer, Service Layer, Integration Tests
+- **Impact**: Thống nhất hành vi toàn hệ thống, bảo toàn dữ liệu giao dịch và tăng độ tin cậy (reliability) của bộ test lên 100%.
 
-### Rule rút ra:
-- Ưu tiên sử dụng khối mã tường minh `{ ... }` thay vì lambda `=>` cho các logic nghiệp vụ.
-- Bắt buộc thêm chú thích `Rationale` cho các quyết định xử lý quan trọng.
+**Bài học rút ra**:
+- **Soft Delete**: Luôn sử dụng `is_active = 0` cho các thực thể chứa lịch sử giao dịch (như User).
+- **Mapster Pattern**: Duy trì cấu trúc 3 dòng (**Retrieve -> Adapt -> Save**) và cấu hình `IgnoreNullValues(true)`.
+- **Exception Handling**: Chuyển đổi từ `BusinessException` sang `NotFoundException` cho các trường hợp 404 để API trả về status code chính xác.
+- **ApiResponse Wrapper**: Trong Test, luôn sử dụng `ApiResponseTestWrapper<T>` để giải mã dữ liệu từ property `.Data`.
+- **Verification Strategy**: Test case phải xác minh sự thay đổi thực tế trong Database (State Verification) thay vì chỉ kiểm tra HTTP Status Code.
 
-### Áp dụng khi:
-- Logic có độ phức tạp trung bình trở lên hoặc chứa nhiều bước.
-- Cần đặt breakpoint để debug hoặc cần giải thích lý do xử lý.
+---
 
-### Tránh:
-- Viết các method dài hoặc phức tạp dưới dạng expression-bodied (`=>`), gây khó đọc và khó bảo trì.
+### [2026-05-02]
+**Topic: Documentation Standardization & Knowledge Management**
+- **Type**: Best Practice
+- **Tags**: [documentation] [workflow] [knowledge-management]
+- **Scope**: Entire Project
+- **Impact**: Tăng tính chuyên nghiệp, dễ dàng onboarding và bảo trì hệ thống tri thức dự án lâu dài.
 
-### Ví dụ:
-```csharp
-public async Task<CheckoutResponseDTO> ProcessOrderAsync(...)
-{
-    // Rationale: Kiểm tra số dư trước khi tạo đơn để tránh lỗi transaction
-    if (balance < total) throw new BusinessException("Không đủ số dư");
-    
-    // logic...
-}
-```
+**Bài học rút ra**:
+- **Source Sync**: Tài liệu (README, memory, rules) phải luôn được đồng bộ hóa với thực tế codebase (kiểm tra .csproj, packages và cấu trúc filesystem) thay vì chỉ viết dựa trên giả định.
+- **Semantic Naming**: Chuyển đổi naming convention từ PLAN-XXX sang PLAN-{topic}-{subtopic}.md giúp việc phân loại và tìm kiếm kế hoạch trở nên trực quan và có tính ngữ nghĩa cao hơn.
+- **Elite Documentation Structure**: Việc áp dụng metadata (Type, Impact, Scope) vào nhật ký tri thức giúp định vị nhanh chóng phạm vi ảnh hưởng của các quyết định kiến trúc cũ.
+- **Tone Balance**: Duy trì tông giọng kỹ thuật trung lập, súc tích (plain technical) giúp tài liệu trở nên đáng tin cậy và tập trung vào giá trị thực thi thay vì mô tả bóng bẩy.
+
+**Tránh**:
+- Tránh việc liệt kê các công nghệ không còn sử dụng (như SqlKata) trong tài liệu chính thức.
+- Tránh đặt tên file kế hoạch theo số thứ tự đơn thuần, gây khó khăn khi số lượng task tăng lên.
