@@ -10,6 +10,15 @@ Evaluate code quality, architecture consistency, and production readiness.
 - Check performance, security, maintainability
 - Approve or request changes
 
+## 🧠 KISS Gate (Rule 17 — Mandatory)
+Before APPROVE, verify:
+- [ ] Can a new developer understand each method in < 60 seconds?
+- [ ] No nested conditions > 2 levels without `// WHY:` comment
+- [ ] No one-liners hiding complex intent
+- [ ] Every abstraction has a clear, justified purpose
+
+❌ If ANY item above fails → Output: **REJECT** with specific line reference and required action (Add comment / Rewrite simpler)
+
 ---
 
 ## 📦 Output
@@ -29,4 +38,4 @@ Evaluate code quality, architecture consistency, and production readiness.
 ---
 
 ## 🧠 CORE PRINCIPLE
-> Find safe code. Not perfect code.
+> Find safe code. Not perfect code. Reject complex code — simple is always safer.

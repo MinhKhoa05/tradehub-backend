@@ -60,8 +60,7 @@ namespace GameTopUp.BLL.Services
                 throw new BusinessException("Số tiền trừ phải lớn hơn 0.");
             }
 
-            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId) 
-                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            var wallet = await GetOrThrowByUserIdAsync(context.UserId);
 
             if (wallet.Balance < amount)
             {
@@ -92,8 +91,7 @@ namespace GameTopUp.BLL.Services
 
         public async Task<TransactionResponseDTO> RefundMoneyAsync(UserContext context, decimal amount, string description)
         {
-            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
-                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            var wallet = await GetOrThrowByUserIdAsync(context.UserId);
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
@@ -114,8 +112,7 @@ namespace GameTopUp.BLL.Services
 
         public async Task<decimal> GetBalanceAsync(UserContext context)
         {
-            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
-                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            var wallet = await GetOrThrowByUserIdAsync(context.UserId);
             return wallet.Balance;
         }
 
@@ -124,14 +121,13 @@ namespace GameTopUp.BLL.Services
             return await _walletTxRepo.GetByUserIdAsync(context.UserId);
         }
 
-        public async Task<TransactionResponseDTO> DepositAsync(UserContext context, int amount)
+        public async Task<TransactionResponseDTO> DepositAsync(UserContext context, decimal amount)
         {
-            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
-                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            var wallet = await GetOrThrowByUserIdAsync(context.UserId);
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                await _walletRepo.IncreaseBalanceAsync(context.UserId, (decimal)amount);
+                await _walletRepo.IncreaseBalanceAsync(context.UserId, amount);
                 
                 var txId = await _walletTxRepo.CreateAsync(new WalletTransaction
                 {
@@ -146,10 +142,9 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task<TransactionResponseDTO> WithdrawAsync(UserContext context, int amount)
+        public async Task<TransactionResponseDTO> WithdrawAsync(UserContext context, decimal amount)
         {
-            var wallet = await _walletRepo.GetByUserIdAsync(context.UserId)
-                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
+            var wallet = await GetOrThrowByUserIdAsync(context.UserId);
 
             if (wallet.Balance < amount)
             {
@@ -158,7 +153,7 @@ namespace GameTopUp.BLL.Services
 
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                var affected = await _walletRepo.DecreaseBalanceAsync(context.UserId, (decimal)amount);
+                var affected = await _walletRepo.DecreaseBalanceAsync(context.UserId, amount);
                 if (affected == 0)
                 {
                     throw new BusinessException("Không thể cập nhật số dư ví hoặc số dư không đủ.");
@@ -177,10 +172,15 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task<TransactionResponseDTO> PayForOrdersAsync(UserContext context, List<long> orderIds, int totalAmount)
+        // --------------- Private Helpers ---------------
+
+        /// <summary>
+        /// Lấy ví của người dùng theo UserId. Ném <see cref="NotFoundException"/> nếu ví chưa được kích hoạt.
+        /// </summary>
+        private async Task<Wallet> GetOrThrowByUserIdAsync(long userId)
         {
-            var description = $"Thanh toán đơn hàng: {string.Join(", ", orderIds)}";
-            return await DeductMoneyAsync(context, (decimal)totalAmount, description);
+            return await _walletRepo.GetByUserIdAsync(userId)
+                ?? throw new NotFoundException("Ví của bạn chưa được kích hoạt. Vui lòng kích hoạt ví để sử dụng.");
         }
     }
 }

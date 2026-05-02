@@ -130,3 +130,44 @@ catch (Exception ex) when (ex.Message.Contains("Duplicate", StringComparison.Ord
     throw new BusinessException("This resource already exists or is being processed.");
 }
 ```
+
+## 17. Fail Fast & KISS Principle
+
+> **Rule**: Any code that the User finds hard to understand OR contains overly complex logic will be **REJECTED immediately**.
+
+### Trigger Conditions (Auto-REJECT)
+- Logic that cannot be understood in one reading
+- Nested conditions deeper than 2 levels without explanation
+- Long methods (> ~30 lines) doing multiple responsibilities
+- Clever/tricky one-liners hiding actual intent
+- Abstractions with no clear rationale
+
+### DEV Obligations Upon REJECT
+DEV MUST choose one of the following remediation actions:
+
+**Option A — Add Comments** (when logic is inherently complex but necessary):
+```csharp
+// WHY: We check balance BEFORE deducting to avoid a negative-balance race window.
+// The DB constraint is the final safety net (Rule 16), but this early-exit is cheaper.
+if (wallet.Balance < request.Amount)
+    throw new BusinessException("Insufficient balance.");
+```
+
+**Option B — Rewrite Simpler** (preferred when complexity is avoidable):
+```csharp
+// BEFORE (hard to read):
+var result = items.Where(x => x.Active).GroupBy(x => x.Type).ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
+
+// AFTER (readable):
+var activeItems = items.Where(x => x.Active);
+var groupedByType = activeItems.GroupBy(x => x.Type);
+var totalByType = groupedByType.ToDictionary(g => g.Key, g => g.Sum(x => x.Value));
+```
+
+### REVIEWER Checklist (KISS)
+- [ ] Can a new developer understand this method in < 60 seconds?
+- [ ] Is every abstraction justified?
+- [ ] Are there comments explaining WHY (not WHAT) for any non-obvious logic?
+
+### Core Mantra
+> **Simple > Clever. Readable > Compact. Obvious > Elegant.**
