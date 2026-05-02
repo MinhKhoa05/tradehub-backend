@@ -6,6 +6,7 @@ using TradeHub.DAL.Entities;
 using TradeHub.DAL.Repositories.Interfaces;
 using Xunit;
 using FluentAssertions;
+using TradeHub.BLL.Config;
 
 namespace TradeHub.Tests.UnitTests.Services
 {
@@ -16,46 +17,57 @@ namespace TradeHub.Tests.UnitTests.Services
 
         public GameServiceTests()
         {
+            MapsterConfig.RegisterMappings();
             _gameRepoMock = new Mock<IGameRepository>();
             _gameService = new GameService(_gameRepoMock.Object);
         }
 
         [Fact]
-        public async Task CreateGameAsync_ShouldReturnGame_WhenValidRequest()
+        public async Task CreateGameAsync_ShouldCreateWithFullData_WhenRequestIsValid()
         {
             // Arrange
-            var request = new CreateGameRequest { Name = "Genshin Impact", ImageUrl = "genshin.png", IsActive = true };
-            _gameRepoMock.Setup(r => r.CreateAsync(It.IsAny<Game>())).ReturnsAsync(1L);
+            var request = new CreateGameRequest 
+            { 
+                Name = "Liên Quân Mobile", 
+                ImageUrl = "lienquan.png", 
+                IsActive = true 
+            };
+            _gameRepoMock.Setup(r => r.CreateAsync(It.IsAny<Game>())).ReturnsAsync(88L);
 
             // Act
             var result = await _gameService.CreateGameAsync(request);
 
             // Assert
             result.Should().NotBeNull();
-            result.Name.Should().Be(request.Name);
-            result.Id.Should().Be(1L);
-            _gameRepoMock.Verify(r => r.CreateAsync(It.IsAny<Game>()), Times.Once);
+            result.Id.Should().Be(88L);
+            result.Name.Should().Be("Liên Quân Mobile");
+            result.ImageUrl.Should().Be("lienquan.png");
+            
+            _gameRepoMock.Verify(r => r.CreateAsync(It.Is<Game>(g => 
+                g.Name == "Liên Quân Mobile" && 
+                g.ImageUrl == "lienquan.png")), Times.Once);
         }
 
         [Fact]
-        public async Task GetGameByIdAsync_ShouldThrowException_WhenGameNotFound()
+        public async Task GetGameByIdAsync_ShouldThrowNotFound_WhenGameDoesNotExist()
         {
             // Arrange
-            _gameRepoMock.Setup(r => r.GetByIdAsync(1L)).ReturnsAsync((Game?)null);
+            _gameRepoMock.Setup(r => r.GetByIdAsync(123L)).ReturnsAsync((Game?)null);
 
             // Act
-            Func<Task> act = () => _gameService.GetGameByIdAsync(1L);
+            Func<Task> act = () => _gameService.GetGameByIdAsync(123L);
 
             // Assert
-            await act.Should().ThrowAsync<BusinessException>().WithMessage("Game không tồn tại");
+            await act.Should().ThrowAsync<NotFoundException>()
+                .WithMessage("Game không tồn tại.");
         }
 
         [Fact]
-        public async Task UpdateGameAsync_ShouldUpdateFields_WhenGameExists()
+        public async Task UpdateGameAsync_ShouldApplyPartialUpdates_WhenUsingMapster()
         {
             // Arrange
-            var existingGame = new Game { Id = 1L, Name = "Old Name", IsActive = true };
-            var request = new UpdateGameRequest { Name = "New Name", IsActive = false };
+            var existingGame = new Game { Id = 1L, Name = "Old Game", ImageUrl = "old.png", IsActive = true };
+            var request = new UpdateGameRequest { Name = "Updated Game", IsActive = false }; // ImageUrl is null
             
             _gameRepoMock.Setup(r => r.GetByIdAsync(1L)).ReturnsAsync(existingGame);
 
@@ -63,23 +75,27 @@ namespace TradeHub.Tests.UnitTests.Services
             var result = await _gameService.UpdateGameAsync(1L, request);
 
             // Assert
-            result.Name.Should().Be("New Name");
+            result.Name.Should().Be("Updated Game");
+            result.ImageUrl.Should().Be("old.png"); // Should NOT be overwritten by null
             result.IsActive.Should().BeFalse();
+            
             _gameRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Game>()), Times.Once);
         }
 
         [Fact]
-        public async Task DeleteGameAsync_ShouldCallDelete_WhenGameExists()
+        public async Task DeleteGameAsync_ShouldPerformHardDelete_ByCallingRepoDelete()
         {
             // Arrange
-            var existingGame = new Game { Id = 1L, Name = "To Delete" };
-            _gameRepoMock.Setup(r => r.GetByIdAsync(1L)).ReturnsAsync(existingGame);
+            var existingGame = new Game { Id = 99L, Name = "Game to Delete" };
+            _gameRepoMock.Setup(r => r.GetByIdAsync(99L)).ReturnsAsync(existingGame);
 
             // Act
-            await _gameService.DeleteGameAsync(1L);
+            await _gameService.DeleteGameAsync(99L);
 
             // Assert
-            _gameRepoMock.Verify(r => r.DeleteAsync(1L), Times.Once);
+            // Rationale: We check existence first, then call hard delete as per GameRepository implementation
+            _gameRepoMock.Verify(r => r.GetByIdAsync(99L), Times.Once);
+            _gameRepoMock.Verify(r => r.DeleteAsync(99L), Times.Once);
         }
     }
 }

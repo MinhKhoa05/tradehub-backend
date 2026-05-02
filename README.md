@@ -5,6 +5,7 @@
 
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512bd4?style=flat-square&logo=dotnet)
 ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white)
 ![Dapper](https://img.shields.io/badge/ORM-Dapper-6d429c?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
@@ -12,114 +13,92 @@
 
 ## 🚀 Project Overview
 
-**TradeHub** is a backend system for a game top-up intermediary platform. It handles order processing and supports wallet-based transactions.
+**TradeHub** is a backend system for a game top-up intermediary platform. It handles order processing for game packages and manages an internal digital wallet for payments and deposits.
 
 Key features:
-- **Order Processing**: Checkout workflows for game packages.
-- **Transaction Tracking**: Transaction history and order state management.
-- **Internal Wallet**: Digital wallet for user deposits, withdrawals, and payments.
-- **Data Integrity**: Database-level concurrency controls and atomic transactions to prevent race conditions during balance updates.
+- **Order Processing**: Checkout workflows for game packages and account info handling.
+- **Transaction Tracking**: Detailed history for orders and wallet transactions.
+- **Internal Wallet**: Secure digital wallet for user balances with transaction atomicity.
+- **Data Integrity**: Database-level concurrency controls and atomic transactions to prevent race conditions during updates.
+- **Standardized Responses**: All API endpoints use an `ApiResponse` wrapper for consistent data structure.
 
 ## 🛠 Tech Stack
 
-- **Language**: C# (ASP.NET Core 8)
-- **Database**: MySQL
-- **ORM**: Dapper, Dommel
-- **Security**: JWT Authentication, BCrypt
-- **Infrastructure**: Docker & Docker Compose
+- **Language/Framework**: C# (ASP.NET Core 8)
+- **Database**: MySQL (Production), Microsoft.Data.Sqlite (Integration Testing)
+- **Data Access**: Dapper and Dommel
+- **Mapping**: Mapster (configured to ignore nulls for partial updates)
+- **Security**: JWT Authentication and BCrypt for password hashing
+- **Testing**: xUnit, Moq, and FluentAssertions
+- **Infrastructure**: Docker and Docker Compose
 
 ## 🤖 AI Workflow
 
-This project uses a multi-agent system to control development execution.
+The project uses a multi-agent system to manage development tasks and ensure code quality.
 
-- **Role Isolation**: Separate agents for Business Analysis, Architecture, Development, Testing, and Code Review.
-- **Approval Gate**: Execution requires an approved `PLAN.md`. All changes must follow the approved scope.
-- **Context Usage**: Agents use centralized documentation (`rules.md`, `architecture.md`, `memory.md`) to ensure consistency.
+- **Role Isolation**: Tasks are split between agents for Business Analysis, Architecture, Development, Testing, and Review.
+- **Scope Locking**: Development only starts after a plan file (`PLAN-{topic}-{subtopic}.md`) is approved.
+- **Knowledge Base**: Centralized documentation in `rules.md` and `memory.md` ensures consistency with architectural decisions.
 
 ## 🏗 Architecture Overview
 
-The application follows a layered architecture to separate concerns:
+The application follows a layered architecture to maintain clear boundaries:
 
-* **Presentation Layer (`TradeHub.API`)**: HTTP endpoints, JWT authorization, and global exception handling.
-* **Business Logic Layer (`TradeHub.BLL`)**: Domain rules and service coordination. Domain services handle single-entity logic, while application services coordinate cross-domain workflows.
-* **Data Access Layer (`TradeHub.DAL`)**: MySQL database operations using Dapper. A custom `DatabaseContext` manages connections and transactions.
+* **Presentation Layer (`TradeHub.API`)**: Handles HTTP endpoints, authorization, and uses global middleware for exception handling and response wrapping.
+* **Business Logic Layer (`TradeHub.BLL`)**: Implements business rules and service coordination. It handles data mapping and business validation.
+* **Data Access Layer (`TradeHub.DAL`)**: Manages MySQL operations and provides a `DatabaseContext` for transaction atomicity across repositories.
+
+### Exception to HTTP Mapping
+| Exception Type | HTTP Status | Use Case |
+| :--- | :--- | :--- |
+| `NotFoundException` | 404 | When a resource like a User or Game is not found |
+| `BusinessException` | 400 | For business rule violations like insufficient balance |
+| `UnauthorizedException`| 401 | When authentication fails or tokens expire |
+| `ForbiddenException` | 403 | When a user lacks permission for a resource |
 
 ## ⚙️ Key Engineering Decisions
 
 ### Transaction Management
-- **Context**: Multi-step database operations require atomic execution to maintain data consistency.
-- **Implementation**: A custom `DatabaseContext` provides an `ExecuteInTransactionAsync()` wrapper. This shares a single connection and transaction across multiple repository calls.
-- **Result**: Guarantees atomicity for workflows like order checkout and wallet deduction. Connection management is abstracted away from the business logic.
+- **Context**: Multi-step database operations (e.g., checkout) require atomicity to prevent partial data updates.
+- **Implementation**: `DatabaseContext` provides an `ExecuteInTransactionAsync()` wrapper that shares a single connection and transaction across multiple repository calls.
 
 ### Concurrency Control
-- **Context**: Financial operations are vulnerable to race conditions under concurrent load.
-- **Implementation**: Database-level conditional SQL updates are used instead of application-level locks:
+- **Context**: Financial operations are vulnerable to race conditions when multiple requests update the same balance.
+- **Implementation**: Uses database-level conditional updates:
   `UPDATE users SET balance = balance - @Amount WHERE id = @UserId AND balance >= @Amount`
-- **Result**: Prevents negative balances and handles concurrent requests at the database layer, avoiding the overhead of distributed locking.
+- **Result**: Ensures balance integrity without the overhead of application-level locking.
 
-## 🔌 Example API Flows
+## 🧪 Testing Strategy
 
-### 1. Deposit to Wallet
-`POST /api/wallet/transactions/deposit`
-```json
-500000
-```
-**Function**: Increases user balance and records the transaction history in a single transaction.
-
-### 2. Pay for Orders
-`POST /api/wallet/pay`
-```json
-{
-  "orderIds": [101, 102],
-  "totalAmount": 250000
-}
-```
-**Function**: Deducts funds with database-level concurrency checks to prevent negative balances.
-
-### 3. Checkout a Game Package
-`POST /api/orders/checkout`
-```json
-{
-  "gameAccountInfo": "Player123_ServerAsia"
-}
-```
-**Function**: Creates an order linked to game account details for automated processing.
+The project uses a dual testing approach to ensure reliability:
+- **Unit Tests**: Focus on the BLL layer by mocking repositories with Moq.
+- **Integration Tests**: Verify full API flows using `Microsoft.AspNetCore.Mvc.Testing`. 
+  - Uses an **In-Memory SQLite** database for data persistence during the test session.
+  - Uses `ApiResponseTestWrapper<T>` to deserialize and verify the standardized API responses.
 
 ## 🏁 How to Run
-
-The application runs in Docker containers. Local .NET or MySQL installations are not required.
 
 1. **Configure Environment**: Create a `.env` file in the root directory with database credentials and JWT secrets.
 2. **Start Services**:
    ```bash
    docker-compose up -d
    ```
-
-*Database schema initialization runs automatically on startup.*
+3. **Run Tests**:
+   ```bash
+   dotnet test
+   ```
 
 ## 📁 Project Structure
 
 ```text
 TradeHub.sln
-├── .ai-assistant/             # Multi-agent workflow configuration
-│   ├── agents/                # Agent prompts and rules
-│   ├── context/               # System architecture and coding guidelines
-│   ├── plans/                 # Approved execution plans
-│   └── workflows.md           # Pipeline definitions
-├── docker-compose.yml         # Container configuration
-├── TradeHub.API/              # HTTP API, middleware, DI setup
-│   ├── Controllers/
-│   ├── Middlewares/           
-│   └── Program.cs
-├── TradeHub.BLL/              # Business logic layer
-│   ├── ApplicationServices/   # Cross-domain workflows
-│   ├── Services/              # Domain services
-│   ├── DTOs/
-│   └── Exceptions/            
-├── TradeHub.DAL/              # Data access layer
-│   ├── Entities/              # Database models
-│   ├── Repositories/          # Dapper queries
-│   ├── DatabaseContext.cs     # Connection and transaction management
-│   └── DatabaseContextExtension.cs # Dapper extensions
-└── TradeHub.Tests/            # Test suite
+├── .ai-assistant/             # AI Workflow and project rules
+│   ├── agents/                # Agent role prompts
+│   ├── context/               # Architecture, rules, and memory
+│   └── plans/                 # Approved development plans
+├── TradeHub.API/              # Controllers, Middlewares, and API setup
+├── TradeHub.BLL/              # Services, DTOs, and Business Logic
+├── TradeHub.DAL/              # Entities and Repositories
+├── TradeHub.Tests/            # Unit and Integration test projects
+└── Database/                  # SQL scripts and migrations
 ```
