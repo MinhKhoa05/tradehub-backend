@@ -1,4 +1,4 @@
-# TradeHub Backend Architecture
+# GameTopUp Backend Architecture
 
 ## 🎯 Overview
 Backend system for game top-up, orders, wallet payments, and user management.
@@ -10,19 +10,19 @@ Backend system for game top-up, orders, wallet payments, and user management.
 
 ## 🧱 Layers
 
-### API Layer (TradeHub.API)
+### API Layer (GameTopUp.API)
 - Controllers: handle requests
 - Middlewares: auth, error handling
 - Filters: validation
 - Program.cs: DI + config
 
-### BLL (TradeHub.BLL)
+### BLL (GameTopUp.BLL)
 - Services: business logic
 - UseCases: complex flows
 - DTOs: data transfer
 - Common: ServiceResult, UserContext
 
-### DAL (TradeHub.DAL)
+### DAL (GameTopUp.DAL)
 - Entities: DB mapping (snake_case ↔ PascalCase)
 - Repositories: Dapper queries
 - DatabaseContext: connection + transaction (Unit of Work)

@@ -1,7 +1,7 @@
 # PLAN-Testing-GlobalRefactor
 
 ## Objective
-Review and refactor the entire test suite of the TradeHub project to ensure robust validation, realistic mocking, and alignment with architectural standards.
+Review and refactor the entire test suite of the GameTopUp project to ensure robust validation, realistic mocking, and alignment with architectural standards.
 
 ## Reference Memory
 - Checked `memory.md`: Confirmed recent fixes for GameApi tests and lessons learned about SQLite schema and ApiResponse wrappers.

@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>TradeHub Backend</h1>
+  <h1>GameTopUp Backend</h1>
   <p><strong>Backend system for a game top-up intermediary platform built with ASP.NET Core 8 & Dapper</strong></p>
 </div>
 
@@ -13,7 +13,7 @@
 
 ## 🚀 Project Overview
 
-**TradeHub** is a backend system for a game top-up intermediary platform. It handles order processing for game packages and manages an internal digital wallet for payments and deposits.
+**GameTopUp** is a backend system for a game top-up intermediary platform. It handles order processing for game packages and manages an internal digital wallet for payments and deposits.
 
 Key features:
 - **Order Processing**: Checkout workflows for game packages and account info handling.
@@ -44,9 +44,9 @@ The project uses a multi-agent system to manage development tasks and ensure cod
 
 The application follows a layered architecture to maintain clear boundaries:
 
-* **Presentation Layer (`TradeHub.API`)**: Handles HTTP endpoints, authorization, and uses global middleware for exception handling and response wrapping.
-* **Business Logic Layer (`TradeHub.BLL`)**: Implements business rules and service coordination. It handles data mapping and business validation.
-* **Data Access Layer (`TradeHub.DAL`)**: Manages MySQL operations and provides a `DatabaseContext` for transaction atomicity across repositories.
+* **Presentation Layer (`GameTopUp.API`)**: Handles HTTP endpoints, authorization, and uses global middleware for exception handling and response wrapping.
+* **Business Logic Layer (`GameTopUp.BLL`)**: Implements business rules and service coordination. It handles data mapping and business validation.
+* **Data Access Layer (`GameTopUp.DAL`)**: Manages MySQL operations and provides a `DatabaseContext` for transaction atomicity across repositories.
 
 ### Exception to HTTP Mapping
 | Exception Type | HTTP Status | Use Case |
@@ -91,14 +91,14 @@ The project uses a dual testing approach to ensure reliability:
 ## 📁 Project Structure
 
 ```text
-TradeHub.sln
+GameTopUp.sln
 ├── .ai-assistant/             # AI Workflow and project rules
 │   ├── agents/                # Agent role prompts
 │   ├── context/               # Architecture, rules, and memory
 │   └── plans/                 # Approved development plans
-├── TradeHub.API/              # Controllers, Middlewares, and API setup
-├── TradeHub.BLL/              # Services, DTOs, and Business Logic
-├── TradeHub.DAL/              # Entities and Repositories
-├── TradeHub.Tests/            # Unit and Integration test projects
+├── GameTopUp.API/             # Controllers, Middlewares, and API setup
+├── GameTopUp.BLL/             # Services, DTOs, and Business Logic
+├── GameTopUp.DAL/             # Entities and Repositories
+├── GameTopUp.Tests/           # Unit and Integration test projects
 └── Database/                  # SQL scripts and migrations
 ```

@@ -1,5 +1,5 @@
 -- seed.sql
--- USE tradehub_db;
+-- USE game_topup_db;
 
 START TRANSACTION;
 
@@ -7,9 +7,9 @@ START TRANSACTION;
 -- USERS
 -- ======================
 INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `role`) VALUES
-(1, 'admin', 'admin@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 1),
+(1, 'admin', 'admin@gametopup.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 1),
 (2, 'member1', 'member1@gmail.com', '$2b$10$IQpdSmIDSadCEVqxbua9Q.Agyc5/TrrOkoyp6VNODmfz.kvBJGDvO', 0),
-(3, 'staff1', 'staff1@tradehub.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 2);
+(3, 'staff1', 'staff1@gametopup.com', '$2b$10$NyUW5g6HWLCOpzRQTMk6keOmdV/pw9DMeqE5vgXkLuN2pJyal1yxK', 2);
 
 -- ======================
 -- WALLETS

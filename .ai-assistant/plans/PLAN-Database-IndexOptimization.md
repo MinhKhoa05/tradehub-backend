@@ -17,7 +17,7 @@ Establish database indexes to optimize query performance based on actual DAL rep
 
 ### 📁 Database Layer
 - **Modify** `Database/schema.sql`: Apply optimized indexes to existing columns.
-- **Modify** `TradeHub.Tests/IntegrationTests/CustomWebApplicationFactory.cs`: Sync test schema with production indexes.
+- **Modify** `GameTopUp.Tests/IntegrationTests/CustomWebApplicationFactory.cs`: Sync test schema with production indexes.
 
 ## Optimized Index Plan (Selectivity-Driven)
 

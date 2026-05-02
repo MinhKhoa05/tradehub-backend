@@ -4,15 +4,15 @@ WORKDIR /app
 
 # Copy csproj & restore
 COPY *.sln .
-COPY TradeHub.DAL/*.csproj ./TradeHub.DAL/
-COPY TradeHub.BLL/*.csproj ./TradeHub.BLL/
-COPY TradeHub.API/*.csproj ./TradeHub.API/
-COPY TradeHub.Tests/*.csproj ./TradeHub.Tests/
+COPY GameTopUp.DAL/*.csproj ./GameTopUp.DAL/
+COPY GameTopUp.BLL/*.csproj ./GameTopUp.BLL/
+COPY GameTopUp.API/*.csproj ./GameTopUp.API/
+COPY GameTopUp.Tests/*.csproj ./GameTopUp.Tests/
 RUN dotnet restore
 
 # Copy source code & build
 COPY . .
-WORKDIR /app/TradeHub.API
+WORKDIR /app/GameTopUp.API
 RUN dotnet publish -c Release -o /app/publish
 
 # Stage 2: Runtime nhẹ
@@ -20,4 +20,4 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine
 WORKDIR /app
 COPY --from=build /app/publish .
 EXPOSE 5000
-ENTRYPOINT ["dotnet", "TradeHub.API.dll"]
+ENTRYPOINT ["dotnet", "GameTopUp.API.dll"]

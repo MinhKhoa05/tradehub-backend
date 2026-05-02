@@ -9,13 +9,13 @@ Establish the User Management API suite including CRUD operations, DTOs, and ser
 
 ## 3. File Changes
 
-### 📁 DAL Layer (TradeHub.DAL)
+### 📁 DAL Layer (GameTopUp.DAL)
 - **Modify** `Repositories/UserRepository.cs`:
     - Add `GetAllAsync(int page, int pageSize)` for pagination.
     - Add `DeleteAsync(long id)` for disabling (soft delete).
     - Update `UpdateAsync(User user)` to handle `updated_at`.
 
-### 📁 BLL Layer (TradeHub.BLL)
+### 📁 BLL Layer (GameTopUp.BLL)
 - **Create** `DTOs/Users/UserResponseDTO.cs`: Output DTO.
 - **Create** `DTOs/Users/UpdateUserRequest.cs`: Input DTO for updates.
 - **Delete** `DTOs/Users/UserResponse.cs`: Deprecated file.
@@ -23,7 +23,7 @@ Establish the User Management API suite including CRUD operations, DTOs, and ser
     - Implement `GetAllAsync`, `GetByIdAsync`, `UpdateProfileAsync`, `DeleteAsync`.
     - Apply Mapster 3-line pattern for `UpdateProfileAsync`.
 
-### 📁 API Layer (TradeHub.API)
+### 📁 API Layer (GameTopUp.API)
 - **Create** `Controllers/UserController.cs`:
     - `GET /api/users` (Query: page, pageSize)
     - `GET /api/users/{id}`

@@ -1,6 +1,6 @@
-# 🚀 TradeHub Backend Rules (Elite Edition)
+# 🚀 GameTopUp Backend Rules (Elite Edition)
 
-Rules for all AI Agents working on TradeHub Backend. Mandatory.
+Rules for all AI Agents working on GameTopUp Backend. Mandatory.
 
 ## 1. Coding Style
 **Naming**

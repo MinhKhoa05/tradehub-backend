@@ -9,13 +9,13 @@ Simplify `NotFoundException` and other business exceptions to accept a single `s
 
 ## File Changes
 
-### 📁 BLL Layer (TradeHub.BLL)
+### 📁 BLL Layer (GameTopUp.BLL)
 - **Modify** `Exceptions/NotFoundException.cs`: Change constructor to `public NotFoundException(string message)`.
 - **Modify** `Services/UserService.cs`: Update calls to `new NotFoundException("Người dùng không tồn tại.")`.
 - **Modify** `Services/GameService.cs`: Update calls to `new NotFoundException("Game không tồn tại.")`.
 - **Modify** `Services/GamePackageService.cs`: Update calls to `new NotFoundException("Gói nạp không tồn tại.")`.
 
-### 📁 Tests Layer (TradeHub.Tests)
+### 📁 Tests Layer (GameTopUp.Tests)
 - **Modify** `UnitTests/Services/UserServiceTests.cs`: Update test cases checking for `NotFoundException`.
 - **Modify** `UnitTests/Services/GameServiceTests.cs`: Update test cases checking for `NotFoundException`.
 - **Modify** `UnitTests/Services/GamePackageServiceTests.cs`: Update test cases checking for `NotFoundException`.

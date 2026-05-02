@@ -12,11 +12,11 @@ Implement explicit wallet creation (manual lazy creation) in `WalletService` and
 
 ### 1. BLL (Business Logic Layer)
 
-#### [MODIFY] `TradeHub.BLL/Services/UserService.cs`
+#### [MODIFY] `GameTopUp.BLL/Services/UserService.cs`
 - Remove `IWalletRepository` and `DatabaseContext` from the constructor.
 - Revert `RegisterAsync` to a simple user creation (remove transaction and wallet creation logic).
 
-#### [MODIFY] `TradeHub.BLL/Services/WalletService.cs`
+#### [MODIFY] `GameTopUp.BLL/Services/WalletService.cs`
 - Add `Task<long> CreateWalletAsync(UserContext context)`:
     - Create a new wallet for the user with 0 balance.
     - Check if wallet already exists to avoid duplicates.
@@ -25,7 +25,7 @@ Implement explicit wallet creation (manual lazy creation) in `WalletService` and
 
 ### 2. API Layer
 
-#### [MODIFY] `TradeHub.API/Controllers/WalletController.cs`
+#### [MODIFY] `GameTopUp.API/Controllers/WalletController.cs`
 - Add `[HttpPost]` method to call `_wallet.CreateWalletAsync(CurrentUser)`.
 
 ### 3. DAL & Database
@@ -39,12 +39,12 @@ Implement explicit wallet creation (manual lazy creation) in `WalletService` and
 - Update `users` data to remove `balance`.
 - Add initial `wallets` data for seeded users.
 
-#### [MODIFY] `TradeHub.Tests/IntegrationTests/CustomWebApplicationFactory.cs`
+#### [MODIFY] `GameTopUp.Tests/IntegrationTests/CustomWebApplicationFactory.cs`
 - Sync schema changes with `schema.sql`.
 
 ### 4. Tests
 
-#### [MODIFY] `TradeHub.Tests/UnitTests/Services/UserServiceTests.cs`
+#### [MODIFY] `GameTopUp.Tests/UnitTests/Services/UserServiceTests.cs`
 - Revert constructor and mocks to remove `IWalletRepository` and `DatabaseContext`.
 - Update `RegisterAsync_ShouldCreateUser_WhenEmailIsUnique` to remove verification of wallet creation.
 

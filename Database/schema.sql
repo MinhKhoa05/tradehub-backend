@@ -1,6 +1,6 @@
 -- schema.sql
 -- Create database if not exists (handled by docker environment normally but good for reference)
--- USE tradehub_db;
+-- USE game_topup_db;
 
 -- 1. Table: users
 CREATE TABLE IF NOT EXISTS users (

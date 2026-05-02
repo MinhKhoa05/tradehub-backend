@@ -1,6 +1,6 @@
 # System Memory & Learning Log
 
-Tài liệu này lưu vết các vấn đề gặp phải, bài học kinh nghiệm và các quyết định kiến trúc quan trọng trong quá trình phát triển TradeHub.
+Tài liệu này lưu vết các vấn đề gặp phải, bài học kinh nghiệm và các quyết định kiến trúc quan trọng trong quá trình phát triển GameTopUp.
 
 ---
 

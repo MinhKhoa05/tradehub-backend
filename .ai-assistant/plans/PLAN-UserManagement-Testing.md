@@ -9,17 +9,17 @@ Implement unit tests for User Management (UserService and UserController) to ens
 
 ## 3. File Changes
 
-### 📁 DAL Layer (TradeHub.DAL)
+### 📁 DAL Layer (GameTopUp.DAL)
 - **Create** `Repositories/Interfaces/IUserRepository.cs`: Extract interface from `UserRepository`.
 - **Modify** `Repositories/UserRepository.cs`: Implement `IUserRepository`.
 
-### 📁 BLL Layer (TradeHub.BLL)
+### 📁 BLL Layer (GameTopUp.BLL)
 - **Modify** `Services/UserService.cs`: Inject `IUserRepository` instead of the concrete class.
 
-### 📁 API Layer (TradeHub.API)
+### 📁 API Layer (GameTopUp.API)
 - **Modify** `Program.cs`: Update DI registration for `IUserRepository`.
 
-### 📁 Tests Layer (TradeHub.Tests)
+### 📁 Tests Layer (GameTopUp.Tests)
 - **Create** `UnitTests/Services/UserServiceTests.cs`: 
     - `GetAllAsync_ShouldReturnMappedDTOs`
     - `GetByIdAsync_ShouldReturnDTO_WhenExists`

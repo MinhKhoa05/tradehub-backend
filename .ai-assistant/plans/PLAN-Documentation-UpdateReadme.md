@@ -1,13 +1,13 @@
 # PLAN-Documentation-UpdateReadme
 
 ## Objective
-Update `README.md` to reflect the current architectural standards, testing infrastructure, and project structure of the TradeHub backend.
+Update `README.md` to reflect the current architectural standards, testing infrastructure, and project structure of the GameTopUp backend.
 
 ## Reference Memory (Source of Truth)
 - **Tech Stack**: `rules.md` Section 13 (Mapster) + `memory.md` [2026-05-02] (xUnit, Moq, SQLite) + **Actual .csproj files**.
 - **Architecture**: `rules.md` Section 1 & 8 (ApiResponse/Exceptions) + `rules.md` Section 11 (Architecture Flow).
 - **Testing Strategy**: `rules.md` Section 15 (Testing Standards).
-- **Project Structure**: Actual codebase (`TradeHub.sln`) and directory analysis.
+- **Project Structure**: Actual codebase (`GameTopUp.sln`) and directory analysis.
 
 ## Change Mode
 - **Refactor**: Updating existing sections (Tech Stack, AI Workflow, Architecture Overview).
