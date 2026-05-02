@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS users (
     balance DECIMAL(18, 2) DEFAULT 0.00,
     role INT DEFAULT 0, -- 0: Member, 1: Admin, 2: Staff
     is_active BOOLEAN DEFAULT TRUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_users_username (username),
+    INDEX idx_users_created (created_at)
 ) ENGINE=InnoDB;
 
 -- 2. Table: games
@@ -19,7 +22,9 @@ CREATE TABLE IF NOT EXISTS games (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
     image_url TEXT,
-    is_active BOOLEAN DEFAULT TRUE
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- 3. Table: game_packages
@@ -37,7 +42,9 @@ CREATE TABLE IF NOT EXISTS game_packages (
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_package_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+    CONSTRAINT fk_package_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    INDEX idx_packages_lookup (game_id, is_active),
+    INDEX idx_packages_normalized (normalized_name)
 ) ENGINE=InnoDB;
 
 -- 4. Table: game_accounts
@@ -52,7 +59,8 @@ CREATE TABLE IF NOT EXISTS game_accounts (
     is_default BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_account_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_account_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE
+    CONSTRAINT fk_account_game FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+    INDEX idx_accounts_user_sort (user_id, is_default, created_at)
 ) ENGINE=InnoDB;
 
 -- 5. Table: cart_items
@@ -62,7 +70,8 @@ CREATE TABLE IF NOT EXISTS cart_items (
     game_package_id BIGINT NOT NULL,
     quantity INT NOT NULL DEFAULT 1,
     CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cart_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE
+    CONSTRAINT fk_cart_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
+    INDEX idx_cart_lookup (user_id, game_package_id)
 ) ENGINE=InnoDB;
 
 -- 6. Table: wallet_transactions
@@ -74,7 +83,8 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     type INT NOT NULL, -- 1: Deposit, 2: Withdraw, 3: PaidOrder, 4: Refund
     description TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_tx_user_sort (user_id, created_at)
 ) ENGINE=InnoDB;
 
 -- 7. Table: orders
@@ -93,7 +103,9 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
-    CONSTRAINT fk_order_tx FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL
+    CONSTRAINT fk_order_tx FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL,
+    INDEX idx_orders_user_sort (user_id, created_at),
+    INDEX idx_orders_status (status)
 ) ENGINE=InnoDB;
 
 -- 8. Table: order_history
@@ -106,5 +118,6 @@ CREATE TABLE IF NOT EXISTS order_history (
     action_by BIGINT NOT NULL,
     is_admin BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    CONSTRAINT fk_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    INDEX idx_history_order_sort (order_id, created_at)
 ) ENGINE=InnoDB;
