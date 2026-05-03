@@ -84,16 +84,29 @@ If already known → do NOT reprocess or re-explain.
 - Only delta changes
 - No system expansion beyond PLAN
 
-## 🎓 7. LEARNING MODE
+## 🎓 7. LEARNING MODE - MENTORSHIP WORKFLOW
+DEV Agent:
+- Scaffolds the file.
+- Implements non-critical parts.
+- **STRICTLY FORBIDDEN** from writing core logic.
+- **MUST** mark logic blocks with `// USER_TASK`, `// TODO: USER IMPLEMENT`, and `// Pseudocode`.
 
-**Enabled by default** unless explicitly disabled by USER.
+USER:
+- Writes the actual code.
+- **MUST** explain the rationale ("Why") to the REVIEWER.
 
-- **Scope**: Leave ~20% of logic unimplemented for USER practice.
-- **Guardrail**: **Do NOT leave critical flow completely empty** (avoid empty functions).
-- **Target**: High-value logic (UseCase / Business Logic).
-- **Limit**: 1–3 `USER_TASK` blocks per feature.
-- **Runnable**: Use `throw new NotImplementedException("USER_TASK: ...")`.
+REVIEWER Agent:
+- **HARD ENFORCEMENT**: **MUST** Fail/Reject the task if:
+  1. No `USER_TASK` is found in a new high-value logic block.
+  2. Core logic was implemented by the AI (DEV).
+  3. USER cannot explain the "Why" behind their implementation.
+- **Socratic Questions Template**:
+  - *"Điều gì xảy ra nếu request này chạy song song (concurrency)?"*
+  - *"Có thể bypass validation này bằng cách nào không?"*
+  - *"DB constraint đóng vai trò gì trong việc bảo vệ dữ liệu ở đây?"*
+  - *"Tại sao bạn lại chọn giải pháp X thay vì Y?"*
+- Only approves when code is clean and USER demonstrates full understanding.
 
 ## 🧠 CORE PRINCIPLE
 
-> Strict roles. Locked scope. Deterministic execution. No autonomous expansion.
+> Strict roles. Locked scope. **Strict Mentorship (No Core-Code Gen)**. Deterministic execution. No autonomous expansion.
