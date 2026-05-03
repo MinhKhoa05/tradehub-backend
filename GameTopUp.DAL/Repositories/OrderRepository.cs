@@ -130,6 +130,28 @@ namespace GameTopUp.DAL.Repositories
                 PendingStatus = OrderStatus.Pending
             });
         }
+
+        public async Task<int> CompleteOrderAsync(long orderId, long adminId)
+        {
+            // Chỉ cho phép hoàn thành đơn hàng khi:
+            // 1. Đơn hàng đang ở trạng thái Processing (Đang xử lý)
+            // 2. Đơn hàng đang được gán cho chính Admin này xử lý
+            var sql = @"
+                UPDATE orders 
+                SET status = @CompletedStatus, 
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE id = @OrderId 
+                AND status = @ProcessingStatus 
+                AND assign_to = @AdminId";
+
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                OrderId = orderId, 
+                AdminId = adminId,
+                CompletedStatus = OrderStatus.Completed,
+                ProcessingStatus = OrderStatus.Processing
+            });
+        }
         
         public async Task<int> CancelOrderAsync(long orderId)
         {

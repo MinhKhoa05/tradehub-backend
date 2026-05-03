@@ -59,6 +59,14 @@ namespace GameTopUp.API.Controllers
         }
 
         [Authorize(Roles = "Admin")]
+        [HttpPost("{orderId}/complete")]
+        public async Task<IActionResult> CompleteOrder(long orderId)
+        {
+            await _orderService.CompleteOrderAsync(orderId, CurrentUser);
+            return ApiOk(null, "Đơn hàng đã được hoàn thành thành công.");
+        }
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("{orderId}/cancel")]
         public async Task<IActionResult> CancelOrder(long orderId)
         {

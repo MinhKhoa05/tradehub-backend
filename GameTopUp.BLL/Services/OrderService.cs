@@ -125,5 +125,67 @@ namespace GameTopUp.BLL.Services
 
             return true;
         }
+
+        public async Task CompleteOrderAsync(long orderId, UserContext context)
+        {
+            // 1. Kiểm tra quyền hạn (Fail Fast)
+            if (context.Role != "Admin")
+            {
+                throw new ForbiddenException("Chỉ Admin mới có quyền hoàn thành đơn hàng.");
+            }
+
+            // 2. Kiểm tra sự tồn tại và trạng thái hiện tại
+            var order = await _orderRepo.GetByIdAsync(orderId)
+                ?? throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
+
+            // 3. Tính Idempotency (Giao hoán): Nếu đơn đã hoàn thành rồi thì trả về thành công luôn
+            if (order.Status == OrderStatus.Completed)
+            {
+                return;
+            }
+
+            // 4. Ràng buộc nghiệp vụ: 
+            // - Phải ở trạng thái Processing
+            // - Phải đúng Admin đang giữ đơn
+            if (order.Status != OrderStatus.Processing)
+            {
+                throw new BusinessException($"Chỉ có thể hoàn thành đơn hàng đang ở trạng thái Đang xử lý (Processing). Trạng thái hiện tại: {order.Status}");
+            }
+
+            if (order.AssignTo != context.UserId)
+            {
+                throw new BusinessException("Bạn không thể hoàn thành đơn hàng này vì nó đang được xử lý bởi một Admin khác.");
+            }
+
+            // 5. Thực thi cập nhật trạng thái
+            await _database.ExecuteInTransactionAsync(async () =>
+            {
+                var affectedRows = await _orderRepo.CompleteOrderAsync(orderId, context.UserId);
+
+                if (affectedRows == 0)
+                {
+                    // Race condition check: Nếu không update được, kiểm tra xem có phải do Admin khác đã xử lý hoặc đơn đã đổi trạng thái
+                    var currentOrder = await _orderRepo.GetByIdAsync(orderId);
+                    if (currentOrder?.Status == OrderStatus.Completed)
+                    {
+                        return; // Idempotent success
+                    }
+
+                    throw new BusinessException("Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại trạng thái hoặc quyền sở hữu đơn hàng.");
+                }
+
+                // 6. Ghi log lịch sử trạng thái
+                await _orderHistoryRepo.CreateAsync(new OrderHistory
+                {
+                    OrderId = orderId,
+                    FromStatus = OrderStatus.Processing,
+                    ToStatus = OrderStatus.Completed,
+                    Note = $"Admin {context.Username} đã xác nhận hoàn thành đơn hàng.",
+                    ActionBy = context.UserId,
+                    IsAdmin = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            });
+        }
     }
 }
