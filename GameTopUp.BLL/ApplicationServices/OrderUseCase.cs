@@ -88,5 +88,40 @@ namespace GameTopUp.BLL.ApplicationServices
             
             return orderIds;
         }
+
+        /// <summary>
+        /// Admin hủy đơn hàng: Chuyển trạng thái đơn -> Hoàn tiền ví cho User -> Ghi log.
+        /// Toàn bộ được thực hiện trong Transaction để đảm bảo không có lỗi thất thoát tiền.
+        /// </summary>
+        public async Task CancelOrderAsync(long orderId, UserContext adminContext)
+        {
+            // 1. Kiểm tra sự tồn tại và trạng thái hiện tại (Fail Fast)
+            var order = await _orderService.GetByIdAsync(orderId)
+                ?? throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
+
+            // 2. Tính Idempotency (Giao hoán): Nếu đơn đã hủy rồi thì trả về thành công luôn
+            if (order.Status == OrderStatus.Cancelled)
+            {
+                return;
+            }
+
+            // 3. Ràng buộc nghiệp vụ: Chỉ cho phép hủy khi đơn hàng đang ở trạng thái Pending
+            if (order.Status != OrderStatus.Pending)
+            {
+                throw new BusinessException($"Chỉ có thể hủy đơn hàng ở trạng thái Chờ (Pending). Trạng thái hiện tại: {order.Status}");
+            }
+
+            // 4. Thực thi quy trình Hủy & Hoàn tiền trong Transaction
+            await _database.ExecuteInTransactionAsync(async () =>
+            {
+                // a. Cập nhật trạng thái đơn hàng & ghi audit log
+                await _orderService.CancelOrderAsync(orderId, adminContext);
+
+                // b. Hoàn tiền cho người dùng sở hữu đơn hàng
+                // Rationale: Sử dụng order.UserId để đảm bảo tiền về đúng ví người mua, không phải admin.
+                var userContext = new UserContext { UserId = order.UserId };
+                await _walletService.RefundMoneyAsync(userContext, order.Total, $"Hoàn tiền cho đơn hàng #{orderId} do Admin hủy.");
+            });
+        }
     }
 }

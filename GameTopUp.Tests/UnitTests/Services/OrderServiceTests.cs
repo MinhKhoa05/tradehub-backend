@@ -113,5 +113,47 @@ namespace GameTopUp.Tests.UnitTests.Services
             await act.Should().ThrowAsync<ForbiddenException>()
                 .WithMessage("Chỉ Admin mới có quyền nhận xử lý đơn hàng.");
         }
+
+        [Fact]
+        public async Task CancelOrderAsync_ShouldSucceed_WhenOrderIsPending()
+        {
+            // Arrange
+            long orderId = 123;
+            var adminContext = new UserContext(1, "admin", "Admin");
+            
+            _orderRepoMock.Setup(r => r.CancelOrderAsync(orderId))
+                .ReturnsAsync(1); // Success
+
+            // Act
+            await _orderService.CancelOrderAsync(orderId, adminContext);
+
+            // Assert
+            _orderRepoMock.Verify(r => r.CancelOrderAsync(orderId), Times.Once);
+            _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.Is<OrderHistory>(h => 
+                h.OrderId == orderId && 
+                h.ToStatus == OrderStatus.Cancelled && 
+                h.ActionBy == adminContext.UserId)), Times.Once);
+        }
+
+        [Fact]
+        public async Task CancelOrderAsync_ShouldThrowBusinessException_WhenOrderIsAlreadyProcessing()
+        {
+            // Arrange
+            long orderId = 123;
+            var adminContext = new UserContext(1, "admin", "Admin");
+            
+            _orderRepoMock.Setup(r => r.CancelOrderAsync(orderId))
+                .ReturnsAsync(0); // Failed atomic update
+            
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId))
+                .ReturnsAsync(new Order { Id = orderId, Status = OrderStatus.Processing });
+
+            // Act
+            Func<Task> act = () => _orderService.CancelOrderAsync(orderId, adminContext);
+
+            // Assert
+            await act.Should().ThrowAsync<BusinessException>()
+                .WithMessage($"Không thể hủy đơn hàng. Trạng thái hiện tại: {OrderStatus.Processing}");
+        }
     }
 }

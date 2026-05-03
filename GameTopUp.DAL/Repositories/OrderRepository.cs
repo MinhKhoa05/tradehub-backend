@@ -130,5 +130,24 @@ namespace GameTopUp.DAL.Repositories
                 PendingStatus = OrderStatus.Pending
             });
         }
+        
+        public async Task<int> CancelOrderAsync(long orderId)
+        {
+            // Chỉ cho phép hủy đơn hàng đang ở trạng thái Chờ (Pending)
+            // Điều này cực kỳ quan trọng để tránh race condition khi admin khác đang xử lý đơn hàng.
+            var sql = @"
+                UPDATE orders 
+                SET status = @CancelledStatus, 
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE id = @OrderId 
+                AND status = @PendingStatus";
+
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                OrderId = orderId, 
+                CancelledStatus = OrderStatus.Cancelled,
+                PendingStatus = OrderStatus.Pending
+            });
+        }
     }
 }

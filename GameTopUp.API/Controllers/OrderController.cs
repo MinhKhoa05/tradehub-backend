@@ -57,5 +57,13 @@ namespace GameTopUp.API.Controllers
             await _orderService.PickOrderAsync(orderId, CurrentUser);
             return ApiOk(null, "Bạn đã tiếp nhận đơn hàng thành công.");
         }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{orderId}/cancel")]
+        public async Task<IActionResult> CancelOrder(long orderId)
+        {
+            await _orderUseCase.CancelOrderAsync(orderId, CurrentUser);
+            return ApiOk(null, "Đơn hàng đã được hủy và hoàn tiền thành công.");
+        }
     }
 }

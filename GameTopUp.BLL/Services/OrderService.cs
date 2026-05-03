@@ -96,5 +96,32 @@ namespace GameTopUp.BLL.Services
                 });
             });
         }
+
+        public async Task CancelOrderAsync(long orderId, UserContext adminContext)
+        {
+            var affectedRows = await _orderRepo.CancelOrderAsync(orderId);
+            
+            if (affectedRows == 0)
+            {
+                // Rationale: Nếu không cập nhật được, có thể do đơn hàng đã đổi trạng thái (Race Condition)
+                // Hoặc đơn hàng không tồn tại (đã được check ở UseCase nhưng check lại cho chắc)
+                var order = await _orderRepo.GetByIdAsync(orderId);
+                if (order == null) throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
+                
+                throw new BusinessException($"Không thể hủy đơn hàng. Trạng thái hiện tại: {order.Status}");
+            }
+
+            // Ghi log lịch sử trạng thái
+            await _orderHistoryRepo.CreateAsync(new OrderHistory
+            {
+                OrderId = orderId,
+                FromStatus = OrderStatus.Pending,
+                ToStatus = OrderStatus.Cancelled,
+                Note = $"Admin {adminContext.Username} đã hủy đơn hàng và hoàn tiền.",
+                ActionBy = adminContext.UserId,
+                IsAdmin = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
     }
 }
