@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using GameTopUp.API;
+using dotenv.net;
 using GameTopUp.API.Extensions;
 using GameTopUp.API.Filters;
 using GameTopUp.API.Middlewares;
@@ -12,7 +12,34 @@ using GameTopUp.DAL.Repositories;
 using GameTopUp.DAL.Interfaces;
 using GameTopUp.BLL.Config;
 
+// Load .env file
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..", ".env");
+if (!File.Exists(envPath)) envPath = ".env"; // Try current dir for Docker
+DotEnv.Load(new DotEnvOptions(envFilePaths: new[] { envPath }));
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Map environment variables to configuration
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")))
+{
+    builder.Configuration["ConnectionStrings:Default"] = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+}
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_KEY")))
+{
+    builder.Configuration["Jwt:Key"] = Environment.GetEnvironmentVariable("JWT_KEY");
+}
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_ISSUER")))
+{
+    builder.Configuration["Jwt:Issuer"] = Environment.GetEnvironmentVariable("JWT_ISSUER");
+}
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_AUDIENCE")))
+{
+    builder.Configuration["Jwt:Audience"] = Environment.GetEnvironmentVariable("JWT_AUDIENCE");
+}
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")))
+{
+    builder.Configuration["AllowedOrigins"] = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
+}
 
 // ================= CORS CONFIGURATION =================
 var originFromConfig = builder.Configuration["AllowedOrigins"];

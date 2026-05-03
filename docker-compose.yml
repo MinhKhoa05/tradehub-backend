@@ -4,15 +4,16 @@ services:
   api:
     build:
       context: .
-    container_name: tradehub_api
+    container_name: game_topup_api
     ports:
-      - "5000:8080" # Gọi từ ngoài qua port 5000
+      - "${API_PORT_EXTERNAL:-5000}:${API_PORT_INTERNAL:-8080}"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      # Map chính xác vào GetConnectionString("Default")
-      - ConnectionStrings__Default=server=db;port=3306;database=game_topup_db;user=root;password=123456
-      # Truyền URL của React vào để config CORS linh hoạt
-      - AllowedOrigins=http://localhost:3000
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - DB_CONNECTION_STRING=server=db;port=${DB_PORT_INTERNAL:-3306};database=${DB_NAME};user=${DB_USER};password=${DB_ROOT_PASSWORD}
+      - JWT_KEY=${JWT_KEY}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
     depends_on:
       db:
         condition: service_healthy
@@ -22,16 +23,16 @@ services:
     container_name: game_topup_db
     restart: always
     environment:
-      MARIADB_ROOT_PASSWORD: 123456
-      MARIADB_DATABASE: game_topup_db
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
     ports:
-      - "3307:3306"
+      - "${DB_PORT_EXTERNAL:-3307}:${DB_PORT_INTERNAL:-3306}"
     volumes:
       - db_data:/var/lib/mysql
       - ./Database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./Database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "${DB_USER}", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10

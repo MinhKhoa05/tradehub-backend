@@ -70,20 +70,26 @@ namespace GameTopUp.API.Extensions
                 {
                     // Tùy chỉnh phản hồi khi người dùng truy cập tài nguyên yêu cầu đăng nhập nhưng chưa có Token.
                     context.HandleResponse();
-                    await WriteErrorResponse(context.HttpContext, "Yêu cầu đăng nhập để thực hiện hành động này.");
+                    await WriteErrorResponse(context.HttpContext, StatusCodes.Status401Unauthorized, "Yêu cầu đăng nhập để thực hiện hành động này.");
                 },
 
                 OnAuthenticationFailed = async context =>
                 {
                     // Xử lý khi Token bị sai định dạng, bị sửa đổi hoặc đã hết hạn.
-                    await WriteErrorResponse(context.HttpContext, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+                    await WriteErrorResponse(context.HttpContext, StatusCodes.Status401Unauthorized, "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+                },
+
+                OnForbidden = async context =>
+                {
+                    // Xử lý khi người dùng không có quyền truy cập endpoint có phân quyền
+                    await WriteErrorResponse(context.HttpContext, StatusCodes.Status403Forbidden, "Bạn không có quyền truy cập tài nguyên này.");
                 }
             };
         }
 
-        private static async Task WriteErrorResponse(HttpContext context, string message)
+        private static async Task WriteErrorResponse(HttpContext context, int statusCode,  string message)
         {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/json";
             
             // Trả về cấu trúc lỗi thống nhất với ApiResponse của hệ thống.

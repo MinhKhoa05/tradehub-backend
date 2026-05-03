@@ -1,6 +1,7 @@
 -- seed.sql
 -- USE game_topup_db;
 
+SET FOREIGN_KEY_CHECKS = 0;
 START TRANSACTION;
 
 -- ======================
@@ -62,3 +63,4 @@ INSERT INTO `wallet_transactions` (`id`, `user_id`, `amount`, `balance_after`, `
 (1, 2, 500000.00, 500000.00, 1, 'Nạp tiền khởi tạo hệ thống');
 
 COMMIT;
+SET FOREIGN_KEY_CHECKS = 1;

@@ -18,6 +18,7 @@ namespace GameTopUp.DAL.Entities
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
 
+        [NotMapped]
         public decimal Total => UnitPrice * Quantity;
 
         public long AssignTo { get; set; } // Admin đang nhận xử lý

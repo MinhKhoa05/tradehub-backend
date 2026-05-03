@@ -31,7 +31,7 @@ namespace GameTopUp.API.Middlewares
                 // Nếu Response đã bắt đầu gửi (Headers đã gửi), ta không được phép ghi đè StatusCode hay Content nữa.
                 if (context.Response.HasStarted)
                 {
-                    _logger.LogWarning("Response đã bắt đầu gửi về client, không thể can thiệp thêm vào Middleware.");
+                    _logger.LogWarning("Response đã bắt đầu gửi về client, không thể can thiệp thêm vào Middleware.");
                     return;
                 }
 

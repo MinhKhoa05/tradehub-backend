@@ -4,8 +4,8 @@ using Dommel;
 namespace GameTopUp.DAL
 {
     /// <summary>
-    /// Dommel -> CRUD don gi?n
-    /// Dapper -> query ph?c t?p / partial update
+    /// Dommel -> CRUD đơn giản
+    /// Dapper -> query phức tạp / partial update
     /// </summary>
     public static class DatabaseExtensions
     {
@@ -18,22 +18,22 @@ namespace GameTopUp.DAL
             return await db.Connection.GetAsync<T>(id, db.Transaction);
         }
 
-        /// <summary>Insert entity don gi?n</summary>
+        /// <summary>Insert entity đơn giản</summary>
         public static async Task<TId?> InsertAsync<T, TId>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
             var id = await db.Connection.InsertAsync(entity, db.Transaction);
-            return id is null ? default : (TId)id;
+            return id is null ? default : (TId)Convert.ChangeType(id, typeof(TId));
         }
 
-        /// <summary>Update to�n b? entity</summary>
+        /// <summary>Update toàn bộ entity</summary>
         public static async Task<bool> UpdateAsync<T>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
             return await db.Connection.UpdateAsync(entity, db.Transaction);
         }
 
-        /// <summary>Delete don gi?n</summary>
+        /// <summary>Delete đơn giản</summary>
         public static async Task<bool> DeleteAsync<T>(this DatabaseContext db, T entity) where T : class
         {
             await db.EnsureOpenAsync();
