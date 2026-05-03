@@ -183,6 +183,68 @@ namespace GameTopUp.Tests.IntegrationTests
             historyCount.Should().Be(1);
         }
 
+        [Fact]
+        public async Task CompleteOrder_ShouldSucceed_WhenAdminCompletesAssignedOrder()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Game Complete");
+            var packageId = await SeedGamePackageAsync(gameId, "Pkg Complete", 100);
+            var customerId = await SeedUserAsync("cust_comp", "cust_comp@test.com");
+            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Pending);
+
+            // Admin picks the order first
+            await _client.PostAsync($"/api/orders/{orderId}/pick", null);
+
+            // Act
+            var response = await _client.PostAsync($"/api/orders/{orderId}/complete", null);
+
+            // Assert
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            
+            var order = await GetOrderFromDbAsync(orderId);
+            order!.Status.Should().Be(OrderStatus.Completed);
+
+            var historyCount = await GetOrderHistoryCountAsync(orderId);
+            historyCount.Should().Be(2); // 1 for Pick, 1 for Complete
+        }
+
+        [Fact]
+        public async Task CompleteOrder_ConcurrentRequests_ShouldBeIdempotent()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Game Comp Race");
+            var packageId = await SeedGamePackageAsync(gameId, "Pkg Comp Race", 100);
+            var customerId = await SeedUserAsync("cust_race", "cust_race@test.com");
+            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Pending);
+
+            // Admin picks the order
+            await _client.PostAsync($"/api/orders/{orderId}/pick", null);
+
+            int concurrentRequests = 10;
+            var tasks = new List<Task<HttpResponseMessage>>();
+
+            // Act
+            for (int i = 0; i < concurrentRequests; i++)
+            {
+                tasks.Add(_client.PostAsync($"/api/orders/{orderId}/complete", null));
+            }
+
+            var responses = await Task.WhenAll(tasks);
+
+            // Assert
+            foreach (var response in responses)
+            {
+                response.StatusCode.Should().Be(HttpStatusCode.OK);
+            }
+
+            var order = await GetOrderFromDbAsync(orderId);
+            order!.Status.Should().Be(OrderStatus.Completed);
+
+            // History should only contain 1 Pick and 1 Complete log
+            var historyCount = await GetOrderHistoryCountAsync(orderId);
+            historyCount.Should().Be(2);
+        }
+
         // Helper class for deserializing ApiResponse in tests
         private class ApiResponseTestWrapper<T>
         {

@@ -155,5 +155,114 @@ namespace GameTopUp.Tests.UnitTests.Services
             // Assert
             result.Should().BeFalse();
         }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldSucceed_WhenValid()
+        {
+            // Arrange
+            long orderId = 123;
+            var context = new UserContext(1, "admin", "Admin");
+            var order = new Order { Id = orderId, Status = OrderStatus.Processing, AssignTo = context.UserId };
+
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId)).ReturnsAsync(order);
+            _orderRepoMock.Setup(r => r.CompleteOrderAsync(orderId, context.UserId)).ReturnsAsync(1);
+
+            // Act
+            await _orderService.CompleteOrderAsync(orderId, context);
+
+            // Assert
+            _orderRepoMock.Verify(r => r.CompleteOrderAsync(orderId, context.UserId), Times.Once);
+            _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.IsAny<OrderHistory>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldBeIdempotent_WhenAlreadyCompleted()
+        {
+            // Arrange
+            long orderId = 123;
+            var context = new UserContext(1, "admin", "Admin");
+            var order = new Order { Id = orderId, Status = OrderStatus.Completed };
+
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId)).ReturnsAsync(order);
+
+            // Act
+            await _orderService.CompleteOrderAsync(orderId, context);
+
+            // Assert
+            _orderRepoMock.Verify(r => r.CompleteOrderAsync(It.IsAny<long>(), It.IsAny<long>()), Times.Never);
+            _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.IsAny<OrderHistory>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldThrowForbidden_WhenNotAdmin()
+        {
+            // Arrange
+            var context = new UserContext(1, "user", "Member");
+
+            // Act
+            Func<Task> act = () => _orderService.CompleteOrderAsync(1, context);
+
+            // Assert
+            await act.Should().ThrowAsync<ForbiddenException>();
+        }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldThrowBusiness_WhenNotProcessing()
+        {
+            // Arrange
+            long orderId = 123;
+            var context = new UserContext(1, "admin", "Admin");
+            var order = new Order { Id = orderId, Status = OrderStatus.Pending };
+
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId)).ReturnsAsync(order);
+
+            // Act
+            Func<Task> act = () => _orderService.CompleteOrderAsync(orderId, context);
+
+            // Assert
+            await act.Should().ThrowAsync<BusinessException>()
+                .WithMessage("*đang ở trạng thái Đang xử lý*");
+        }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldThrowBusiness_WhenAdminMismatch()
+        {
+            // Arrange
+            long orderId = 123;
+            var context = new UserContext(1, "admin", "Admin");
+            var order = new Order { Id = orderId, Status = OrderStatus.Processing, AssignTo = 2};
+            
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId)).ReturnsAsync(order);
+            
+            // Act
+            Func<Task> act = () => _orderService.CompleteOrderAsync(orderId, context);
+
+            // Assert
+            await act.Should().ThrowAsync<BusinessException>()
+                .WithMessage("*đang được xử lý bởi một Admin khác.*");
+        }
+
+        [Fact]
+        public async Task CompleteOrderAsync_ShouldHandleRaceCondition_ByCheckingFinalState()
+        {
+            // Arrange
+            long orderId = 123;
+            var context = new UserContext(1, "admin", "Admin");
+            var order = new Order { Id = orderId, Status = OrderStatus.Processing, AssignTo = context.UserId };
+
+            _orderRepoMock.Setup(r => r.GetByIdAsync(orderId)).ReturnsAsync(order);
+            _orderRepoMock.Setup(r => r.CompleteOrderAsync(orderId, context.UserId)).ReturnsAsync(0); // Atomic update failed
+            
+            // Re-fetch returns Completed (meaning someone else finished it)
+            _orderRepoMock.SetupSequence(r => r.GetByIdAsync(orderId))
+                .ReturnsAsync(order)
+                .ReturnsAsync(new Order { Id = orderId, Status = OrderStatus.Completed });
+
+            // Act
+            await _orderService.CompleteOrderAsync(orderId, context);
+
+            // Assert: Should NOT throw exception because it's idempotent
+            _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.IsAny<OrderHistory>()), Times.Never);
+        }
     }
 }
