@@ -115,10 +115,22 @@ namespace GameTopUp.BLL.ApplicationServices
             await _database.ExecuteInTransactionAsync(async () =>
             {
                 // a. Cập nhật trạng thái đơn hàng & ghi audit log
-                await _orderService.CancelOrderAsync(orderId, adminContext);
+                var isCancelled = await _orderService.CancelOrderAsync(orderId, adminContext);
+
+                if (!isCancelled)
+                {
+                    // Nếu không cancel được bằng lệnh atomic, có thể do Admin khác đã cancel trước đó rồi.
+                    // Kiểm tra lại trạng thái thực tế: nếu đã là Cancelled thì coi như thành công (Idempotent).
+                    var currentOrder = await _orderService.GetByIdAsync(orderId);
+                    if (currentOrder?.Status == OrderStatus.Cancelled)
+                    {
+                        return;
+                    }
+
+                    throw new BusinessException($"Không thể hủy đơn hàng. Trạng thái hiện tại: {currentOrder?.Status}");
+                }
 
                 // b. Hoàn tiền cho người dùng sở hữu đơn hàng
-                // Rationale: Sử dụng order.UserId để đảm bảo tiền về đúng ví người mua, không phải admin.
                 var userContext = new UserContext { UserId = order.UserId };
                 await _walletService.RefundMoneyAsync(userContext, order.Total, $"Hoàn tiền cho đơn hàng #{orderId} do Admin hủy.");
             });

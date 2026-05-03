@@ -97,18 +97,18 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task CancelOrderAsync(long orderId, UserContext adminContext)
+        public async Task<bool> CancelOrderAsync(long orderId, UserContext adminContext)
         {
             var affectedRows = await _orderRepo.CancelOrderAsync(orderId);
             
             if (affectedRows == 0)
             {
                 // Rationale: Nếu không cập nhật được, có thể do đơn hàng đã đổi trạng thái (Race Condition)
-                // Hoặc đơn hàng không tồn tại (đã được check ở UseCase nhưng check lại cho chắc)
+                // Ta không ném lỗi ở đây mà để UseCase quyết định tính Idempotency.
                 var order = await _orderRepo.GetByIdAsync(orderId);
                 if (order == null) throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
                 
-                throw new BusinessException($"Không thể hủy đơn hàng. Trạng thái hiện tại: {order.Status}");
+                return false;
             }
 
             // Ghi log lịch sử trạng thái
@@ -122,6 +122,8 @@ namespace GameTopUp.BLL.Services
                 IsAdmin = true,
                 CreatedAt = DateTime.UtcNow
             });
+
+            return true;
         }
     }
 }

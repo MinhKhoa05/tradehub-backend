@@ -115,7 +115,7 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CancelOrderAsync_ShouldSucceed_WhenOrderIsPending()
+        public async Task CancelOrderAsync_ShouldReturnTrue_WhenOrderIsPending()
         {
             // Arrange
             long orderId = 123;
@@ -125,9 +125,10 @@ namespace GameTopUp.Tests.UnitTests.Services
                 .ReturnsAsync(1); // Success
 
             // Act
-            await _orderService.CancelOrderAsync(orderId, adminContext);
+            var result = await _orderService.CancelOrderAsync(orderId, adminContext);
 
             // Assert
+            result.Should().BeTrue();
             _orderRepoMock.Verify(r => r.CancelOrderAsync(orderId), Times.Once);
             _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.Is<OrderHistory>(h => 
                 h.OrderId == orderId && 
@@ -136,7 +137,7 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CancelOrderAsync_ShouldThrowBusinessException_WhenOrderIsAlreadyProcessing()
+        public async Task CancelOrderAsync_ShouldReturnFalse_WhenOrderIsAlreadyProcessing()
         {
             // Arrange
             long orderId = 123;
@@ -149,11 +150,10 @@ namespace GameTopUp.Tests.UnitTests.Services
                 .ReturnsAsync(new Order { Id = orderId, Status = OrderStatus.Processing });
 
             // Act
-            Func<Task> act = () => _orderService.CancelOrderAsync(orderId, adminContext);
+            var result = await _orderService.CancelOrderAsync(orderId, adminContext);
 
             // Assert
-            await act.Should().ThrowAsync<BusinessException>()
-                .WithMessage($"Không thể hủy đơn hàng. Trạng thái hiện tại: {OrderStatus.Processing}");
+            result.Should().BeFalse();
         }
     }
 }

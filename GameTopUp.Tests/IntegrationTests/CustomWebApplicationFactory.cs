@@ -38,16 +38,26 @@ namespace GameTopUp.Tests.IntegrationTests
                     options.DefaultChallengeScheme = "Test";
                 }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("Test", options => { });
 
-                // Create and open a SQLite connection
-                _connection = new SqliteConnection("DataSource=:memory:");
+                // Use a shared memory database to allow multiple connections to see the same data
+                const string connectionString = "Data Source=test_db;Mode=Memory;Cache=Shared";
+                
+                // Keep one connection open to prevent the database from being destroyed
+                _connection = new SqliteConnection(connectionString);
                 _connection.Open();
+                _connection.Execute("PRAGMA busy_timeout = 5000;");
 
-                // Add DatabaseContext using SQLite (shared connection)
-                services.AddScoped<DatabaseContext>(sp => new TestDatabaseContext(_connection!));
+                // Add DatabaseContext: each request gets its own connection to the shared DB
+                services.AddScoped<DatabaseContext>(sp => 
+                {
+                    var conn = new SqliteConnection(connectionString);
+                    conn.Open();
+                    conn.Execute("PRAGMA busy_timeout = 5000;");
+                    return new DatabaseContext(conn);
+                });
 
                 // Create the database schema directly on the connection
                 _connection.Execute(@"
-                    CREATE TABLE users (
+                    CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         username TEXT NOT NULL,
                         email TEXT NOT NULL UNIQUE,
@@ -57,10 +67,10 @@ namespace GameTopUp.Tests.IntegrationTests
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
-                    CREATE INDEX idx_users_username ON users(username);
-                    CREATE INDEX idx_users_created ON users(created_at);
+                    CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+                    CREATE INDEX IF NOT EXISTS idx_users_created ON users(created_at);
 
-                    CREATE TABLE wallets (
+                    CREATE TABLE IF NOT EXISTS wallets (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL UNIQUE,
                         balance REAL DEFAULT 0,
@@ -68,9 +78,9 @@ namespace GameTopUp.Tests.IntegrationTests
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_wallets_user ON wallets(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id);
 
-                    CREATE TABLE games (
+                    CREATE TABLE IF NOT EXISTS games (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT NOT NULL,
                         image_url TEXT,
@@ -79,7 +89,7 @@ namespace GameTopUp.Tests.IntegrationTests
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
                     );
 
-                    CREATE TABLE game_packages (
+                    CREATE TABLE IF NOT EXISTS game_packages (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         name TEXT NOT NULL,
                         image_url TEXT,
@@ -95,10 +105,10 @@ namespace GameTopUp.Tests.IntegrationTests
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_packages_lookup ON game_packages(game_id, is_active);
-                    CREATE INDEX idx_packages_normalized ON game_packages(normalized_name);
+                    CREATE INDEX IF NOT EXISTS idx_packages_lookup ON game_packages(game_id, is_active);
+                    CREATE INDEX IF NOT EXISTS idx_packages_normalized ON game_packages(normalized_name);
 
-                    CREATE TABLE game_accounts (
+                    CREATE TABLE IF NOT EXISTS game_accounts (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         game_id INTEGER NOT NULL,
@@ -111,9 +121,9 @@ namespace GameTopUp.Tests.IntegrationTests
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
                         FOREIGN KEY(game_id) REFERENCES games(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_accounts_user_sort ON game_accounts(user_id, is_default, created_at);
+                    CREATE INDEX IF NOT EXISTS idx_accounts_user_sort ON game_accounts(user_id, is_default, created_at);
 
-                    CREATE TABLE cart_items (
+                    CREATE TABLE IF NOT EXISTS cart_items (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         game_package_id INTEGER NOT NULL,
@@ -121,9 +131,9 @@ namespace GameTopUp.Tests.IntegrationTests
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
                         FOREIGN KEY(game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_cart_lookup ON cart_items(user_id, game_package_id);
+                    CREATE INDEX IF NOT EXISTS idx_cart_lookup ON cart_items(user_id, game_package_id);
 
-                    CREATE TABLE wallet_transactions (
+                    CREATE TABLE IF NOT EXISTS wallet_transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         amount REAL NOT NULL,
@@ -133,9 +143,9 @@ namespace GameTopUp.Tests.IntegrationTests
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_tx_user_sort ON wallet_transactions(user_id, created_at);
+                    CREATE INDEX IF NOT EXISTS idx_tx_user_sort ON wallet_transactions(user_id, created_at);
 
-                    CREATE TABLE orders (
+                    CREATE TABLE IF NOT EXISTS orders (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         game_account_info TEXT NOT NULL,
@@ -152,10 +162,10 @@ namespace GameTopUp.Tests.IntegrationTests
                         FOREIGN KEY(game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
                         FOREIGN KEY(wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL
                     );
-                    CREATE INDEX idx_orders_user_sort ON orders(user_id, created_at);
-                    CREATE INDEX idx_orders_status ON orders(status);
+                    CREATE INDEX IF NOT EXISTS idx_orders_user_sort ON orders(user_id, created_at);
+                    CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 
-                    CREATE TABLE order_history (
+                    CREATE TABLE IF NOT EXISTS order_history (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         order_id INTEGER NOT NULL,
                         from_status INTEGER NOT NULL,
@@ -166,7 +176,7 @@ namespace GameTopUp.Tests.IntegrationTests
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE CASCADE
                     );
-                    CREATE INDEX idx_history_order_sort ON order_history(order_id, created_at);
+                    CREATE INDEX IF NOT EXISTS idx_history_order_sort ON order_history(order_id, created_at);
                 ");
             });
         }
