@@ -84,6 +84,16 @@ If already known → do NOT reprocess or re-explain.
 - Only delta changes
 - No system expansion beyond PLAN
 
+## 🎓 7. LEARNING MODE
+
+**Enabled by default** unless explicitly disabled by USER.
+
+- **Scope**: Leave ~20% of logic unimplemented for USER practice.
+- **Guardrail**: **Do NOT leave critical flow completely empty** (avoid empty functions).
+- **Target**: High-value logic (UseCase / Business Logic).
+- **Limit**: 1–3 `USER_TASK` blocks per feature.
+- **Runnable**: Use `throw new NotImplementedException("USER_TASK: ...")`.
+
 ## 🧠 CORE PRINCIPLE
 
 > Strict roles. Locked scope. Deterministic execution. No autonomous expansion.

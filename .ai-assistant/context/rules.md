@@ -171,3 +171,32 @@ var totalByType = groupedByType.ToDictionary(g => g.Key, g => g.Sum(x => x.Value
 
 ### Core Mantra
 > **Simple > Clever. Readable > Compact. Obvious > Elegant.**
+
+## 18. 🎓 Learning Mode
+
+Enabled by default unless explicitly disabled.
+
+- **Scope**: Leave ~20% of core logic unimplemented.
+- **Do NOT leave critical flow completely empty** (avoid leaving entire functions as TODO).
+- **Target**: UseCase orchestration or complex business validations (not trivial code).
+
+- **Guidance**:
+  - Use `// USER_TASK: [Step description]` for each missing piece.
+  - Provide clear instructions + hints if needed.
+
+- **Runnable State**:
+  - Code MUST compile.
+  - Use `throw new NotImplementedException("USER_TASK: ...")`.
+
+- **Limit**:
+  - 1–3 `USER_TASK` blocks per feature to avoid overload.
+
+- **Testing**:
+  - Mark as "Pending User Implementation" in validation reports.
+  - Still verify surrounding logic and overall structure.
+
+## 19. 🎯 USER EXECUTION RULE
+
+- **Self-Attempt First**: USER must attempt to implement all `USER_TASK` blocks BEFORE asking AI for completion.
+- **Assistance Policy**: AI may assist or complete the code only after a valid attempt (even if partial) is made by the USER.
+- **No Auto-Complete**: AI must NOT auto-complete `USER_TASK` in subsequent edits unless the USER explicitly requests: "Help me complete USER_TASK" or similar.
