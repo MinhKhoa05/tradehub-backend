@@ -32,6 +32,7 @@ The system uses **JWT (JSON Web Token)** for authentication.
 | | PUT | `/api/auth/password` | Change user password | Yes | User |
 | **User** | GET | `/api/users` | Get user list (paginated) | Yes | Admin |
 | | GET | `/api/users/{id}` | Get detailed user information | Yes | User/Admin |
+| | GET | `/api/users/me` | Get detailed user information | Yes | User |
 | | PUT | `/api/users/{id}` | Update user information | Yes | User/Admin |
 | | DELETE | `/api/users/{id}` | Delete user from the system | Yes | Admin |
 | **Game** | GET | `/api/games` | Get list of all games | No | All |

@@ -36,7 +36,7 @@ namespace GameTopUp.BLL.Services
                 throw new BusinessException("Số lượng gói phải lớn hơn 0.");
             }
 
-            var cartItem = await _cartItemRepo.GetByUserPackageAsync(context.UserId, request.ProductId);
+            var cartItem = await _cartItemRepo.GetByUserPackageAsync(context.UserId, request.GamePackageId);
             
             if (cartItem != null)
             {
@@ -50,7 +50,7 @@ namespace GameTopUp.BLL.Services
             cartItem = new CartItem 
             { 
                 UserId = context.UserId, 
-                GamePackageId = request.ProductId, 
+                GamePackageId = request.GamePackageId, 
                 Quantity = request.Quantity 
             };
             
@@ -58,23 +58,23 @@ namespace GameTopUp.BLL.Services
             return cartItem;
         }
 
-        public async Task UpdateItemQuantityAsync(UserContext context, long productId, int quantity)
+        public async Task UpdateItemQuantityAsync(UserContext context, long gamePackageId, int quantity)
         {
             if (quantity <= 0)
             {
                 throw new BusinessException("Số lượng sản phẩm phải lớn hơn 0.");
             }
 
-            var rowsAffected = await _cartItemRepo.UpdateQuantityAsync(context.UserId, productId, quantity);
+            var rowsAffected = await _cartItemRepo.UpdateQuantityAsync(context.UserId, gamePackageId, quantity);
             if (rowsAffected == 0)
             {
                 throw new BusinessException("Sản phẩm không tồn tại trong giỏ hàng.");
             }
         }
 
-        public async Task RemoveItemAsync(UserContext context, long productId)
+        public async Task RemoveItemAsync(UserContext context, long gamePackageId)
         {
-            var rowsAffected = await _cartItemRepo.DeleteAsync(context.UserId, productId);
+            var rowsAffected = await _cartItemRepo.DeleteAsync(context.UserId, gamePackageId);
             if (rowsAffected == 0)
             {
                 throw new BusinessException("Sản phẩm không tồn tại trong giỏ hàng.");

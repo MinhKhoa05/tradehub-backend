@@ -32,6 +32,14 @@ namespace GameTopUp.API.Controllers
         }
 
         [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyProfile()
+        {
+            var result = await _userService.GetByIdAsync(CurrentUser.UserId);
+            return ApiOk(result);
+        }
+
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(long id, [FromBody] UpdateUserRequest request)
         {

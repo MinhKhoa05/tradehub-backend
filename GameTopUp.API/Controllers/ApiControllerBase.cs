@@ -45,10 +45,5 @@ namespace GameTopUp.API.Controllers
         {
             return StatusCode(201, ApiResponse.Ok(data, message));
         }
-
-        protected IActionResult ApiNoContent()
-        {
-            return NoContent();
-        }
     }
 }

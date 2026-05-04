@@ -51,7 +51,7 @@ namespace GameTopUp.API.Controllers
         public async Task<IActionResult> ChangePassword(PasswordChangeRequest passwordChangeRequest)
         {
             await _auth.ChangePasswordAsync(CurrentUser, passwordChangeRequest);
-            return ApiNoContent();
+            return ApiOk(null, "Đổi mật khẩu thành công");
         }
     }
 }

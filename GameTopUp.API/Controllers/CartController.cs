@@ -38,18 +38,18 @@ namespace GameTopUp.API.Controllers
             return ApiCreated(cartItem, "Sản phẩm đã được thêm vào giỏ hàng.");
         }
 
-        [HttpPut("items/{productId}")]
-        public async Task<IActionResult> UpdateQuantity(long productId, [FromBody] int quantity)
+        [HttpPut("items/{gamePackageId}")]
+        public async Task<IActionResult> UpdateQuantity(long gamePackageId, [FromBody] int quantity)
         {
-            await _cart.UpdateItemQuantityAsync(CurrentUser, productId, quantity);
-            return ApiNoContent();
+            await _cart.UpdateItemQuantityAsync(CurrentUser, gamePackageId, quantity);
+            return ApiOk(null, "Cập nhật thành công");
         }
 
-        [HttpDelete("items/{productId}")]
-        public async Task<IActionResult> RemoveCartItem(long productId)
+        [HttpDelete("items/{gamePackageId}")]
+        public async Task<IActionResult> RemoveCartItem(long gamePackageId)
         {
-            await _cart.RemoveItemAsync(CurrentUser, productId);
-            return ApiNoContent();
+            await _cart.RemoveItemAsync(CurrentUser, gamePackageId);
+            return ApiOk(null, "Xóa thành công");
         }
     }
 }
