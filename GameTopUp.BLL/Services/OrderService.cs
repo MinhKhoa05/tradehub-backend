@@ -1,4 +1,3 @@
-using GameTopUp.DAL;
 using GameTopUp.DAL.Entities;
 using GameTopUp.DAL.Interfaces;
 using GameTopUp.BLL.Common;
@@ -10,38 +9,11 @@ namespace GameTopUp.BLL.Services
     {
         private readonly IOrderRepository _orderRepo;
         private readonly IOrderHistoryRepository _orderHistoryRepo;
-        private readonly DatabaseContext _database;
 
-        public OrderService(IOrderRepository orderRepo, IOrderHistoryRepository orderHistoryRepo, DatabaseContext database)
+        public OrderService(IOrderRepository orderRepo, IOrderHistoryRepository orderHistoryRepo)
         {
             _orderRepo = orderRepo;
             _orderHistoryRepo = orderHistoryRepo;
-            _database = database;
-        }
-
-        public async Task<long> CreateOrderAsync(Order order, long walletTransactionId)
-        {
-            order.WalletTransactionId = walletTransactionId;
-            order.Status = OrderStatus.Pending;
-            order.CreatedAt = order.UpdatedAt = DateTime.UtcNow;
-
-            return await _database.ExecuteInTransactionAsync(async () =>
-            {
-                var orderId = await _orderRepo.CreateAsync(order);
-                
-                // Lưu vết lịch sử trạng thái ngay khi tạo đơn để dễ dàng truy vết (Audit Log)
-                await _orderHistoryRepo.CreateAsync(new OrderHistory
-                {
-                    OrderId = orderId,
-                    FromStatus = OrderStatus.Pending,
-                    ToStatus = OrderStatus.Pending,
-                    Note = "Đơn hàng được tạo thành công và đang chờ xử lý.",
-                    ActionBy = order.UserId,
-                    CreatedAt = DateTime.UtcNow
-                });
-                
-                return orderId;
-            });
         }
 
         public async Task<List<Order>> GetOrdersAsync(UserContext context, OrderStatus? status = null)
@@ -59,66 +31,128 @@ namespace GameTopUp.BLL.Services
             return await _orderRepo.GetByIdAsync(orderId);
         }
 
-        public async Task PickOrderAsync(long orderId, UserContext context)
+        public async Task<Order> LockAndGetByIdAsync(long orderId)
         {
-            // 1. Kiểm tra quyền hạn (Thực tế thường check ở Controller nhưng check lại ở đây cho chắc)
-            if (context.Role != "Admin")
-            {
-                throw new ForbiddenException("Chỉ Admin mới có quyền nhận xử lý đơn hàng.");
-            }
+            var order = await _orderRepo.GetByIdForUpdateAsync(orderId)
+                ?? throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
+            return order;
+        }
 
-            // 2. Thực thi lệnh cập nhật mang tính Atomic (Nguyên tử)
-            await _database.ExecuteInTransactionAsync(async () =>
-            {
-                var affectedRows = await _orderRepo.PickOrderAsync(orderId, context.UserId);
-                
-                if (affectedRows == 0)
-                {
-                    // Nếu không có dòng nào bị ảnh hưởng, có 2 khả năng:
-                    // - Đơn hàng không tồn tại
-                    // - Đơn hàng đã được Admin khác nhận rồi (Race condition)
-                    var order = await _orderRepo.GetByIdAsync(orderId);
-                    if (order == null) throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
-                    
-                    throw new BusinessException("Đơn hàng này đã được người khác tiếp nhận hoặc không còn ở trạng thái chờ.");
-                }
+        public async Task<long> CreateOrder(Order order, UserContext user)
+        {
+            var newOrderId = await _orderRepo.CreateAsync(order);
+            order.Id = newOrderId;
 
-                // 3. Ghi log lịch sử trạng thái
-                await _orderHistoryRepo.CreateAsync(new OrderHistory
-                {
-                    OrderId = orderId,
-                    FromStatus = OrderStatus.Pending,
-                    ToStatus = OrderStatus.Processing,
-                    Note = $"Admin {context.Username} đã tiếp nhận đơn hàng.",
-                    ActionBy = context.UserId,
-                    IsAdmin = true,
-                    CreatedAt = DateTime.UtcNow
-                });
+            // WHY: Lưu trữ log lịch sử ngay khi khởi tạo đơn hàng để dễ tracking dòng đời Order.
+            await _orderHistoryRepo.CreateAsync(new OrderHistory
+            {
+                OrderId = newOrderId,
+                FromStatus = OrderStatus.Pending,
+                ToStatus = OrderStatus.Pending,
+                Note = "Đơn hàng được tạo.",
+                ActionBy = user.UserId,
+                IsAdmin = false,
+                CreatedAt = DateTime.UtcNow
+            });
+
+            return newOrderId;
+        }
+
+        public async Task PickOrder(Order order, UserContext admin)
+        {
+            // WHY: Tránh lỗi giao diện khi Admin bấm "Tiếp nhận" liên tiếp nhiều lần (Idempotent).
+            if (order.Status == OrderStatus.Processing && order.AssignTo == admin.UserId)
+                return;
+
+            // WHY: Đơn hàng phải ở trạng thái chờ mới được xử lý. Tránh việc đơn đã Hủy hoặc Hoàn thành bị can thiệp.
+            if (order.Status != OrderStatus.Pending)
+                throw new BusinessException("Đơn hàng không còn ở trạng thái chờ.");
+
+            // WHY: Ngăn chặn tình trạng 2 Admin cùng lúc nhảy vào xử lý chung một đơn hàng (Race Condition).
+            if (order.AssignTo != 0)
+                throw new BusinessException("Đơn hàng đã được tiếp nhận bởi người khác.");
+
+            var fromStatus = order.Status;
+
+            order.Status = OrderStatus.Processing;
+            order.AssignTo = admin.UserId;
+            order.AssignAt = DateTime.UtcNow;
+            order.UpdatedAt = DateTime.UtcNow;
+
+            await _orderRepo.UpdateAsync(order);
+
+            await _orderHistoryRepo.CreateAsync(new OrderHistory
+            {
+                OrderId = order.Id,
+                FromStatus = fromStatus,
+                ToStatus = OrderStatus.Processing,
+                Note = $"Admin {admin.Username} tiếp nhận đơn hàng.",
+                ActionBy = admin.UserId,
+                IsAdmin = true,
+                CreatedAt = DateTime.UtcNow
             });
         }
 
-        public async Task<bool> CancelOrderAsync(long orderId, UserContext adminContext)
+        public async Task CompleteOrder(Order order, UserContext admin)
         {
-            var affectedRows = await _orderRepo.CancelOrderAsync(orderId);
-            
-            if (affectedRows == 0)
-            {
-                // Rationale: Nếu không cập nhật được, có thể do đơn hàng đã đổi trạng thái (Race Condition)
-                // Ta không ném lỗi ở đây mà để UseCase quyết định tính Idempotency.
-                var order = await _orderRepo.GetByIdAsync(orderId);
-                if (order == null) throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
-                
-                return false;
-            }
+            // WHY: Hỗ trợ retry an toàn nếu mạng chập chờn khi Admin bấm Hoàn thành.
+            if (order.Status == OrderStatus.Completed)
+                return;
 
-            // Ghi log lịch sử trạng thái
+            // WHY: Bắt buộc đơn hàng phải trải qua bước Processing trước khi Hoàn thành.
+            if (order.Status != OrderStatus.Processing)
+                throw new BusinessException("Trạng thái đơn hàng không hợp lệ để hoàn thành.");
+
+            // WHY: Đảm bảo tính trách nhiệm. Admin nào tiếp nhận (Pick) thì Admin đó mới có quyền Hoàn thành.
+            if (order.AssignTo != admin.UserId)
+                throw new BusinessException("Bạn không thể can thiệp vào đơn hàng của người khác.");
+
+            var fromStatus = order.Status;
+
+            order.Status = OrderStatus.Completed;
+            order.UpdatedAt = DateTime.UtcNow;
+
+            await _orderRepo.UpdateAsync(order);
+
             await _orderHistoryRepo.CreateAsync(new OrderHistory
             {
-                OrderId = orderId,
-                FromStatus = OrderStatus.Pending,
+                OrderId = order.Id,
+                FromStatus = fromStatus,
+                ToStatus = OrderStatus.Completed,
+                Note = $"Admin {admin.Username} xác nhận hoàn thành.",
+                ActionBy = admin.UserId,
+                IsAdmin = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        public async Task<bool> CancelOrder(Order order, UserContext admin, string? reason = null)
+        {
+            // WHY: Trả về bool (isNewCancellation) để UseCase biết có cần thực hiện Hoàn tiền hay không, 
+            // tránh lỗi hoàn tiền 2 lần cho khách hàng nếu có request hủy trùng lặp.
+            if (order.Status == OrderStatus.Cancelled)
+                return false;
+
+            // WHY: Chỉ có thể hủy khi đơn chưa được xử lý. Nếu đang Processing thì phải Release trước (nếu có nghiệp vụ).
+            if (order.Status != OrderStatus.Pending)
+                throw new BusinessException("Không thể hủy đơn hàng đang ở trạng thái này.");
+
+            var fromStatus = order.Status;
+
+            order.Status = OrderStatus.Cancelled;
+            order.UpdatedAt = DateTime.UtcNow;
+
+            await _orderRepo.UpdateAsync(order);
+
+            var note = $"Admin {admin.Username} hủy đơn hàng." + (string.IsNullOrEmpty(reason) ? "" : $" Lý do: {reason}");
+
+            await _orderHistoryRepo.CreateAsync(new OrderHistory
+            {
+                OrderId = order.Id,
+                FromStatus = fromStatus,
                 ToStatus = OrderStatus.Cancelled,
-                Note = $"Admin {adminContext.Username} đã hủy đơn hàng và hoàn tiền.",
-                ActionBy = adminContext.UserId,
+                Note = note,
+                ActionBy = admin.UserId,
                 IsAdmin = true,
                 CreatedAt = DateTime.UtcNow
             });
@@ -126,65 +160,17 @@ namespace GameTopUp.BLL.Services
             return true;
         }
 
-        public async Task CompleteOrderAsync(long orderId, UserContext context)
+        public async Task AddHistoryAsync(Order order, OrderStatus fromStatus, UserContext admin, string note)
         {
-            // 1. Kiểm tra quyền hạn (Fail Fast)
-            if (context.Role != "Admin")
+            await _orderHistoryRepo.CreateAsync(new OrderHistory
             {
-                throw new ForbiddenException("Chỉ Admin mới có quyền hoàn thành đơn hàng.");
-            }
-
-            // 2. Kiểm tra sự tồn tại và trạng thái hiện tại
-            var order = await _orderRepo.GetByIdAsync(orderId)
-                ?? throw new NotFoundException($"Không tìm thấy đơn hàng #{orderId}");
-
-            // 3. Tính Idempotency (Giao hoán): Nếu đơn đã hoàn thành rồi thì trả về thành công luôn
-            if (order.Status == OrderStatus.Completed)
-            {
-                return;
-            }
-
-            // 4. Ràng buộc nghiệp vụ: 
-            // - Phải ở trạng thái Processing
-            // - Phải đúng Admin đang giữ đơn
-            if (order.Status != OrderStatus.Processing)
-            {
-                throw new BusinessException($"Chỉ có thể hoàn thành đơn hàng đang ở trạng thái Đang xử lý (Processing). Trạng thái hiện tại: {order.Status}");
-            }
-
-            if (order.AssignTo != context.UserId)
-            {
-                throw new BusinessException("Bạn không thể hoàn thành đơn hàng này vì nó đang được xử lý bởi một Admin khác.");
-            }
-
-            // 5. Thực thi cập nhật trạng thái
-            await _database.ExecuteInTransactionAsync(async () =>
-            {
-                var affectedRows = await _orderRepo.CompleteOrderAsync(orderId, context.UserId);
-
-                if (affectedRows == 0)
-                {
-                    // Race condition check: Nếu không update được, kiểm tra xem có phải do Admin khác đã xử lý hoặc đơn đã đổi trạng thái
-                    var currentOrder = await _orderRepo.GetByIdAsync(orderId);
-                    if (currentOrder?.Status == OrderStatus.Completed)
-                    {
-                        return; // Idempotent success
-                    }
-
-                    throw new BusinessException("Không thể cập nhật trạng thái đơn hàng. Vui lòng kiểm tra lại trạng thái hoặc quyền sở hữu đơn hàng.");
-                }
-
-                // 6. Ghi log lịch sử trạng thái
-                await _orderHistoryRepo.CreateAsync(new OrderHistory
-                {
-                    OrderId = orderId,
-                    FromStatus = OrderStatus.Processing,
-                    ToStatus = OrderStatus.Completed,
-                    Note = $"Admin {context.Username} đã xác nhận hoàn thành đơn hàng.",
-                    ActionBy = context.UserId,
-                    IsAdmin = true,
-                    CreatedAt = DateTime.UtcNow
-                });
+                OrderId = order.Id,
+                FromStatus = fromStatus,
+                ToStatus = order.Status,
+                Note = note,
+                ActionBy = admin.UserId,
+                IsAdmin = true,
+                CreatedAt = DateTime.UtcNow
             });
         }
     }

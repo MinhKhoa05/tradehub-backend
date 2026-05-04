@@ -45,9 +45,10 @@ Rules for all AI Agents working on GameTopUp Backend. Mandatory.
 - **Soft Delete**: Use `is_active = 0` for entities with transactional history (e.g., User) to preserve data integrity.
 
 ## 4. Transaction (Unit of Work)
-- Use `ExecuteInTransactionAsync` for multi-step writes.
-- Typically implemented in Service or UseCase layer.
-- Auto commit/rollback managed by `DatabaseContext`.
+- **Strict Boundary**: Transaction MUST ONLY be created at the `UseCase` layer. 
+- **Service Agnostic**: Service layer MUST NOT create, commit, or rollback transactions under any circumstance. Service methods MUST be designed to be transaction-agnostic and safe to execute within an existing transaction context.
+- **Atomic Operations**: If a business operation requires multiple repository calls or steps that must be atomic, those steps MUST be executed inside a UseCase-managed transaction boundary (`ExecuteInTransactionAsync`).
+- **One-line Rule**: Transaction management is the responsibility of the UseCase. Services only execute business logic and are strictly forbidden from controlling the transaction lifecycle.
 
 ## 5. Service / BLL Rules
 - Service = business orchestration layer.
@@ -130,6 +131,13 @@ catch (Exception ex) when (ex.Message.Contains("Duplicate", StringComparison.Ord
     throw new BusinessException("This resource already exists or is being processed.");
 }
 ```
+
+- **Concurrency Strategy Guidelines**:
+  - **Pessimistic Locking (`FOR UPDATE`)**: SHOULD BE USED for complex state transitions that involve orchestration, multi-step validation, cross-domain side-effects (e.g., Wallet deductions/refunds), or accompanying audit logs.
+    - *Pattern*: `LockAndGetByIdAsync` in UseCase -> Pass entity to Service for C# business validation -> Call standard `UpdateAsync(Entity)`.
+    - *Trade-off*: Holding a pessimistic lock for too long causes database bottlenecks. Do not use it blindly.
+  - **Conditional Updates (`WHERE`)**: SHOULD BE USED for simple, single-table atomic updates where the business logic is trivial and there are no cross-domain side effects (e.g., `UPDATE Users SET LastLogin = NOW() WHERE Id = X`). This prevents unnecessary locking overhead.
+  - **Decision Authority**: Locking strategies involve complex trade-offs. If an AI Agent is unsure whether an operation has side-effects or which locking strategy to apply (Pessimistic, Conditional, or Optimistic), the Agent **MUST ASK the USER** for architectural guidance before implementing the code.
 
 ## 17. Fail Fast & KISS Principle
 

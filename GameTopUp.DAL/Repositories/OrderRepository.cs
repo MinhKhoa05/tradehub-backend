@@ -26,6 +26,36 @@ namespace GameTopUp.DAL.Repositories
             });
         }
 
+        public async Task<Order?> GetByIdForUpdateAsync(long orderId)
+        {
+            var sql = "SELECT * FROM orders WHERE id = @Id FOR UPDATE";
+            
+            return await _database.QueryFirstAsync<Order>(sql, new 
+            { 
+                Id = orderId 
+            });
+        }
+
+        public async Task<int> UpdateAsync(Order order)
+        {
+            var sql = @"
+                UPDATE orders 
+                SET status = @Status, 
+                    assign_to = @AssignTo, 
+                    assign_at = @AssignAt, 
+                    updated_at = @UpdatedAt 
+                WHERE id = @Id";
+
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                Id = order.Id,
+                Status = order.Status,
+                AssignTo = order.AssignTo,
+                AssignAt = order.AssignAt,
+                UpdatedAt = order.UpdatedAt
+            });
+        }
+
         public async Task<List<Order>> GetByUserIdAsync(long userId, OrderStatus? status = null)
         {
             // Hỗ trợ lọc theo trạng thái đơn hàng nếu người dùng yêu cầu.
@@ -41,57 +71,6 @@ namespace GameTopUp.DAL.Repositories
             });
         }
 
-        /// <summary>
-        /// Kiểm tra quyền sở hữu đơn hàng của người dùng.
-        /// Việc kiểm tra này cực kỳ quan trọng trước khi cho phép người dùng xem chi tiết hoặc thực hiện hành động với đơn hàng.
-        /// </summary>
-        public async Task<bool> IsOrderBelongsToUserAsync(long userId, long orderId)
-        {
-            var sql = @"
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM orders
-                    WHERE id = @OrderId AND user_id = @UserId
-                );
-            ";
-
-            return await _database.ScalarAsync<bool>(sql, new 
-            { 
-                UserId = userId, 
-                OrderId = orderId 
-            });
-        }
-
-        public async Task<int> CreateRangeAsync(IEnumerable<Order> orders)
-        {
-            var sql = @"INSERT INTO orders (
-                user_id,
-                game_account_info,
-                wallet_transaction_id,
-                game_package_id,
-                unit_price,
-                quantity,
-                status,
-                created_at,
-                updated_at,
-                updated_by
-            )
-            VALUES (
-                @UserId,
-                @GameAccountInfo,
-                @WalletTransactionId,
-                @GamePackageId,
-                @UnitPrice,
-                @Quantity,
-                @Status,
-                @CreatedAt,
-                @UpdatedAt,
-                @UpdatedBy
-            );";
-
-            return await _database.ExecuteAsync(sql, orders);
-        }
-
         public async Task<long> CreateAsync(Order order)
         {
             return await _database.InsertAsync<Order, long>(order);
@@ -105,70 +84,6 @@ namespace GameTopUp.DAL.Repositories
             { 
                 Id = orderId, 
                 Status = newStatus 
-            });
-        }
-
-        public async Task<int> PickOrderAsync(long orderId, long adminId)
-        {
-            // Sử dụng WHERE status = @PendingStatus VÀ (assign_to = 0 OR assign_to IS NULL)
-            // để đảm bảo tính nguyên tử (Atomic), chặn Race Condition nếu 2 Admin cùng nhấn 'Nhận đơn' cùng lúc.
-            var sql = @"
-                UPDATE orders 
-                SET status = @ProcessingStatus, 
-                    assign_to = @AdminId, 
-                    assign_at = CURRENT_TIMESTAMP, 
-                    updated_at = CURRENT_TIMESTAMP 
-                WHERE id = @OrderId 
-                AND status = @PendingStatus 
-                AND (assign_to = 0 OR assign_to IS NULL)";
-
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                OrderId = orderId, 
-                AdminId = adminId,
-                ProcessingStatus = OrderStatus.Processing,
-                PendingStatus = OrderStatus.Pending
-            });
-        }
-
-        public async Task<int> CompleteOrderAsync(long orderId, long adminId)
-        {
-            // Chỉ cho phép hoàn thành đơn hàng khi:
-            // 1. Đơn hàng đang ở trạng thái Processing (Đang xử lý)
-            // 2. Đơn hàng đang được gán cho chính Admin này xử lý
-            var sql = @"
-                UPDATE orders 
-                SET status = @CompletedStatus, 
-                    updated_at = CURRENT_TIMESTAMP 
-                WHERE id = @OrderId 
-                AND status = @ProcessingStatus 
-                AND assign_to = @AdminId";
-
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                OrderId = orderId, 
-                AdminId = adminId,
-                CompletedStatus = OrderStatus.Completed,
-                ProcessingStatus = OrderStatus.Processing
-            });
-        }
-        
-        public async Task<int> CancelOrderAsync(long orderId)
-        {
-            // Chỉ cho phép hủy đơn hàng đang ở trạng thái Chờ (Pending)
-            // Điều này cực kỳ quan trọng để tránh race condition khi admin khác đang xử lý đơn hàng.
-            var sql = @"
-                UPDATE orders 
-                SET status = @CancelledStatus, 
-                    updated_at = CURRENT_TIMESTAMP 
-                WHERE id = @OrderId 
-                AND status = @PendingStatus";
-
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                OrderId = orderId, 
-                CancelledStatus = OrderStatus.Cancelled,
-                PendingStatus = OrderStatus.Pending
             });
         }
     }

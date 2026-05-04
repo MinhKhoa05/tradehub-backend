@@ -5,12 +5,10 @@ namespace GameTopUp.DAL.Interfaces
     public interface IOrderRepository
     {
         Task<Order?> GetByIdAsync(long orderId);
+        Task<Order?> GetByIdForUpdateAsync(long orderId);
         Task<List<Order>> GetByUserIdAsync(long userId, OrderStatus? status = null);
-        Task<bool> IsOrderBelongsToUserAsync(long userId, long orderId);
         Task<long> CreateAsync(Order order);
+        Task<int> UpdateAsync(Order order);
         Task<int> UpdateStatusAsync(long orderId, OrderStatus newStatus);
-        Task<int> PickOrderAsync(long orderId, long adminId);
-        Task<int> CompleteOrderAsync(long orderId, long adminId);
-        Task<int> CancelOrderAsync(long orderId);
     }
 }

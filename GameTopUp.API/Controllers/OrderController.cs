@@ -54,7 +54,7 @@ namespace GameTopUp.API.Controllers
         [HttpPost("{orderId}/pick")]
         public async Task<IActionResult> PickOrder(long orderId)
         {
-            await _orderService.PickOrderAsync(orderId, CurrentUser);
+            await _orderUseCase.PickOrderAsync(orderId, CurrentUser);
             return ApiOk(null, "Bạn đã tiếp nhận đơn hàng thành công.");
         }
 
@@ -62,7 +62,7 @@ namespace GameTopUp.API.Controllers
         [HttpPost("{orderId}/complete")]
         public async Task<IActionResult> CompleteOrder(long orderId)
         {
-            await _orderService.CompleteOrderAsync(orderId, CurrentUser);
+            await _orderUseCase.CompleteOrderAsync(orderId, CurrentUser);
             return ApiOk(null, "Đơn hàng đã được hoàn thành thành công.");
         }
 
