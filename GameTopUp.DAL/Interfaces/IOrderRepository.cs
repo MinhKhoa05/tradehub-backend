@@ -10,5 +10,6 @@ namespace GameTopUp.DAL.Interfaces
         Task<long> CreateAsync(Order order);
         Task<int> UpdateAsync(Order order);
         Task<int> UpdateStatusAsync(long orderId, OrderStatus newStatus);
+        Task<bool> HasPendingOrderAsync(long userId);
     }
 }

@@ -7,7 +7,7 @@ namespace GameTopUp.BLL.DTOs.GamePackages
         public decimal? SalePrice { get; set; }
         public decimal? OriginalPrice { get; set; }
         public decimal? ImportPrice { get; set; }
-        public decimal? PackageBudget { get; set; }
+        public int? StockQuantity { get; set; }
         public bool? IsActive { get; set; }
     }
 }

@@ -16,6 +16,11 @@ namespace GameTopUp.BLL.Services
             _orderHistoryRepo = orderHistoryRepo;
         }
 
+        public async Task<bool> HasPendingOrderAsync(long userId)
+        {
+            return await _orderRepo.HasPendingOrderAsync(userId);
+        }
+
         public async Task<List<Order>> GetOrdersAsync(UserContext context, OrderStatus? status = null)
         {
             return await _orderRepo.GetByUserIdAsync(context.UserId, status);
@@ -38,8 +43,13 @@ namespace GameTopUp.BLL.Services
             return order;
         }
 
-        public async Task<long> CreateOrder(Order order, UserContext user)
+        public async Task<long> CreateOrderAsync(Order order, UserContext user)
         {
+            if (await HasPendingOrderAsync(user.UserId))
+            {
+                throw new BusinessException("Bạn đang có một đơn hàng chờ thanh toán. Vui lòng hoàn tất hoặc hủy đơn hàng đó trước khi tạo đơn mới.");
+            }
+
             var newOrderId = await _orderRepo.CreateAsync(order);
             order.Id = newOrderId;
 
@@ -47,9 +57,9 @@ namespace GameTopUp.BLL.Services
             await _orderHistoryRepo.CreateAsync(new OrderHistory
             {
                 OrderId = newOrderId,
-                FromStatus = OrderStatus.Pending,
-                ToStatus = OrderStatus.Pending,
-                Note = "Đơn hàng được tạo.",
+                FromStatus = order.Status,
+                ToStatus = order.Status,
+                Note = "Đơn hàng được tạo (Chờ thanh toán).",
                 ActionBy = user.UserId,
                 IsAdmin = false,
                 CreatedAt = DateTime.UtcNow
@@ -58,19 +68,15 @@ namespace GameTopUp.BLL.Services
             return newOrderId;
         }
 
-        public async Task PickOrder(Order order, UserContext admin)
+        public async Task PickOrderAsync(Order order, UserContext admin)
         {
             // WHY: Tránh lỗi giao diện khi Admin bấm "Tiếp nhận" liên tiếp nhiều lần (Idempotent).
             if (order.Status == OrderStatus.Processing && order.AssignTo == admin.UserId)
                 return;
 
-            // WHY: Đơn hàng phải ở trạng thái chờ mới được xử lý. Tránh việc đơn đã Hủy hoặc Hoàn thành bị can thiệp.
-            if (order.Status != OrderStatus.Pending)
-                throw new BusinessException("Đơn hàng không còn ở trạng thái chờ.");
-
-            // WHY: Ngăn chặn tình trạng 2 Admin cùng lúc nhảy vào xử lý chung một đơn hàng (Race Condition).
-            if (order.AssignTo != 0)
-                throw new BusinessException("Đơn hàng đã được tiếp nhận bởi người khác.");
+            // WHY: Chỉ cho phép Admin nhận các đơn hàng ĐÃ THANH TOÁN (Paid).
+            if (order.Status != OrderStatus.Paid)
+                throw new BusinessException("Chỉ có thể tiếp nhận đơn hàng đã thanh toán.");
 
             var fromStatus = order.Status;
 
@@ -93,7 +99,7 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task CompleteOrder(Order order, UserContext admin)
+        public async Task CompleteOrderAsync(Order order, UserContext admin)
         {
             // WHY: Hỗ trợ retry an toàn nếu mạng chập chờn khi Admin bấm Hoàn thành.
             if (order.Status == OrderStatus.Completed)
@@ -126,50 +132,51 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task<bool> CancelOrder(Order order, UserContext admin, string? reason = null)
+        public async Task<OrderStatus?> CancelOrderAsync(Order order, UserContext admin, string? reason = null)
         {
-            // WHY: Trả về bool (isNewCancellation) để UseCase biết có cần thực hiện Hoàn tiền hay không, 
-            // tránh lỗi hoàn tiền 2 lần cho khách hàng nếu có request hủy trùng lặp.
-            if (order.Status == OrderStatus.Cancelled)
-                return false;
+            // WHY: Trả về trạng thái cũ để UseCase biết có cần hoàn tiền/hoàn kho hay không.
+            if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
+                return null;
 
-            // WHY: Chỉ có thể hủy khi đơn chưa được xử lý. Nếu đang Processing thì phải Release trước (nếu có nghiệp vụ).
-            if (order.Status != OrderStatus.Pending)
-                throw new BusinessException("Không thể hủy đơn hàng đang ở trạng thái này.");
-
-            var fromStatus = order.Status;
+            var oldStatus = order.Status;
 
             order.Status = OrderStatus.Cancelled;
             order.UpdatedAt = DateTime.UtcNow;
 
             await _orderRepo.UpdateAsync(order);
 
-            var note = $"Admin {admin.Username} hủy đơn hàng." + (string.IsNullOrEmpty(reason) ? "" : $" Lý do: {reason}");
+            var note = $"Hủy đơn hàng." + (string.IsNullOrEmpty(reason) ? "" : $" Lý do: {reason}");
 
             await _orderHistoryRepo.CreateAsync(new OrderHistory
             {
                 OrderId = order.Id,
-                FromStatus = fromStatus,
+                FromStatus = oldStatus,
                 ToStatus = OrderStatus.Cancelled,
                 Note = note,
                 ActionBy = admin.UserId,
-                IsAdmin = true,
+                IsAdmin = admin.IsAdmin,
                 CreatedAt = DateTime.UtcNow
             });
 
-            return true;
+            return oldStatus;
         }
 
-        public async Task AddHistoryAsync(Order order, OrderStatus fromStatus, UserContext admin, string note)
+        public async Task PayOrderAsync(Order order, UserContext user, string note)
         {
+            var fromStatus = OrderStatus.Pending; 
+            order.Status = OrderStatus.Paid; 
+            order.UpdatedAt = DateTime.UtcNow;
+            
+            await _orderRepo.UpdateAsync(order);
+
             await _orderHistoryRepo.CreateAsync(new OrderHistory
             {
                 OrderId = order.Id,
-                FromStatus = fromStatus,
+                FromStatus = fromStatus, 
                 ToStatus = order.Status,
                 Note = note,
-                ActionBy = admin.UserId,
-                IsAdmin = true,
+                ActionBy = user.UserId,
+                IsAdmin = false,
                 CreatedAt = DateTime.UtcNow
             });
         }

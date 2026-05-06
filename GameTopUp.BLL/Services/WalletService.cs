@@ -53,7 +53,7 @@ namespace GameTopUp.BLL.Services
         /// Cần thực hiện trừ tiền trước khi tạo đơn hàng để đảm bảo khách hàng đủ khả năng thanh toán, 
         /// tránh tình trạng giữ hàng ảo hoặc tạo đơn hàng lỗi do thiếu vốn.
         /// </summary>
-        public async Task<TransactionResponseDTO> DeductMoneyAsync(UserContext context, decimal amount, string description)
+        public async Task<TransactionResponseDTO> DeductMoneyAsync(UserContext context, decimal amount, string description, long? orderId = null)
         {
             if (amount <= 0)
             {
@@ -82,6 +82,7 @@ namespace GameTopUp.BLL.Services
                     BalanceAfter = wallet.Balance - amount,
                     Type = WalletTransactionType.PaidOrder,
                     Description = description,
+                    OrderId = orderId,
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -89,7 +90,7 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task<TransactionResponseDTO> RefundMoneyAsync(UserContext context, decimal amount, string description)
+        public async Task<TransactionResponseDTO> RefundMoneyAsync(UserContext context, decimal amount, string description, long? orderId = null)
         {
             var wallet = await GetOrThrowByUserIdAsync(context.UserId);
 
@@ -104,6 +105,7 @@ namespace GameTopUp.BLL.Services
                     BalanceAfter = wallet.Balance + amount,
                     Type = WalletTransactionType.Refund,
                     Description = description,
+                    OrderId = orderId,
                     CreatedAt = DateTime.UtcNow
                 });
                 return new TransactionResponseDTO { TransactionId = txId };

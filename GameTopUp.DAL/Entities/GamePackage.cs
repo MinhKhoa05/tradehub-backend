@@ -18,24 +18,9 @@ namespace GameTopUp.DAL.Entities
         public decimal OriginalPrice { get; set; }
         public decimal ImportPrice { get; set; }
         
-        public decimal PackageBudget { get; set; }
-        public decimal SpentAmount { get; set; }
-        
+        public int StockQuantity { get; set; }
         public bool IsActive { get; set; }
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        [NotMapped]
-        public int CurrentStock
-        {
-            get
-            {
-                if (ImportPrice <= 0) return 0;
-                var remainingBudget = PackageBudget - SpentAmount;
-                return remainingBudget > 0 ? (int)Math.Floor(remainingBudget / ImportPrice) : 0;
-            }
-        }
     }
 }

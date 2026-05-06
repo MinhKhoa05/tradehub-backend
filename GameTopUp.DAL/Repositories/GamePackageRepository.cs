@@ -53,26 +53,30 @@ namespace GameTopUp.DAL.Repositories
             var sql = @"UPDATE game_packages 
                         SET name = @Name, image_url = @ImageUrl, normalized_name = @NormalizedName, 
                             sale_price = @SalePrice, original_price = @OriginalPrice, import_price = @ImportPrice, 
-                            package_budget = @PackageBudget, is_active = @IsActive, updated_at = CURRENT_TIMESTAMP
+                            stock_quantity = @StockQuantity, is_active = @IsActive, updated_at = CURRENT_TIMESTAMP
                         WHERE id = @Id";
             
             return await _database.ExecuteAsync(sql, gamePackage);
         }
 
-        /// <summary>
-        /// Cập nhật ngân sách đã chi tiêu cho gói nạp.
-        /// Việc tách riêng hàm này giúp đảm bảo hiệu năng khi chỉ cần cập nhật một trường dữ liệu duy nhất.
-        /// </summary>
-        public async Task<int> UpdateStockBudgetAsync(long id, decimal spentAmountToAdd)
+        public async Task<int> IncreaseStockAsync(long id, int quantity)
         {
-            var sql = "UPDATE game_packages SET spent_amount = spent_amount + @SpentAmountToAdd WHERE id = @Id";
+            var sql = @"UPDATE game_packages 
+                        SET stock_quantity = stock_quantity + @Quantity, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = @Id";
             
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                Id = id, 
-                SpentAmountToAdd = spentAmountToAdd 
-            });
+            return await _database.ExecuteAsync(sql, new { Id = id, Quantity = quantity });
         }
+
+        public async Task<int> DecreaseStockAsync(long id, int quantity)
+        {
+            var sql = @"UPDATE game_packages 
+                        SET stock_quantity = stock_quantity - @Quantity, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = @Id AND stock_quantity >= @Quantity";
+            
+            return await _database.ExecuteAsync(sql, new { Id = id, Quantity = quantity });
+        }
+
 
         public async Task<int> DeleteAsync(long id)
         {

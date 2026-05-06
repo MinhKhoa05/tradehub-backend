@@ -12,8 +12,6 @@ namespace GameTopUp.DAL.Entities
         public long UserId { get; set; }
         public string GameAccountInfo { get; set; } = null!;
 
-        public long WalletTransactionId { get; set; }
-
         public long GamePackageId { get; set; }
         public decimal UnitPrice { get; set; }
         public int Quantity { get; set; }
@@ -31,9 +29,10 @@ namespace GameTopUp.DAL.Entities
 
     public enum OrderStatus
     {
-        Pending = 1,        // User đặt hàng
-        Processing = 2,     // Admin đang xử lý
-        Completed = 3,      // Hoàn thành
-        Cancelled = 4      // Hủy đơn
+        Pending = 1,        // Chờ thanh toán
+        Paid = 2,           // Đã thanh toán, chờ xử lý
+        Processing = 3,     // Admin đang xử lý
+        Completed = 4,      // Hoàn thành
+        Cancelled = 5       // Hủy đơn
     }
 }

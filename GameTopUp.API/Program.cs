@@ -115,7 +115,6 @@ builder.Services.AddScoped<DatabaseContext>(sp =>
 
 // ================= REPOSITORIES =================
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<CartItemRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderHistoryRepository, OrderHistoryRepository>();
 builder.Services.AddScoped<IWalletTransactionRepository, WalletTransactionRepository>();
@@ -125,13 +124,11 @@ builder.Services.AddScoped<IGamePackageRepository, GamePackageRepository>();
 builder.Services.AddScoped<IGameAccountRepository, GameAccountRepository>();
 
 // ================= QUERIES =================
-builder.Services.AddScoped<CartItemQuery>();
 
 // ================= SERVICES =================
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<GameService>();
 builder.Services.AddScoped<GamePackageService>();
-builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<WalletService>();
 

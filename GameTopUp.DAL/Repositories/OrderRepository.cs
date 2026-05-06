@@ -86,5 +86,16 @@ namespace GameTopUp.DAL.Repositories
                 Status = newStatus 
             });
         }
+
+        public async Task<bool> HasPendingOrderAsync(long userId)
+        {
+            var sql = "SELECT COUNT(1) FROM orders WHERE user_id = @UserId AND status = @Status";
+            var count = await _database.QueryFirstAsync<int>(sql, new 
+            { 
+                UserId = userId, 
+                Status = OrderStatus.Pending 
+            });
+            return count > 0;
+        }
     }
 }

@@ -20,8 +20,8 @@ namespace GameTopUp.BLL.DTOs.GamePackages
         [Range(0, double.MaxValue)]
         public decimal ImportPrice { get; set; }
         
-        [Range(0, double.MaxValue)]
-        public decimal PackageBudget { get; set; }
+        [Range(0, int.MaxValue)]
+        public int StockQuantity { get; set; }
         
         public bool IsActive { get; set; } = true;
     }

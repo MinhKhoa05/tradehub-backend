@@ -6,73 +6,69 @@ using GameTopUp.DAL.Entities;
 using GameTopUp.DAL.Interfaces;
 using GameTopUp.DAL.DTOs;
 using GameTopUp.BLL.DTOs.Orders;
-using GameTopUp.BLL.DTOs.Carts;
 
 namespace GameTopUp.BLL.ApplicationServices
 {
     public class OrderUseCase
     {
-        private readonly CartService _cartService;
+        private readonly GamePackageService _packageService;
         private readonly WalletService _walletService;
         private readonly OrderService _orderService;
         private readonly DatabaseContext _database;
 
         public OrderUseCase(
-            CartService cartService,
+            GamePackageService packageService,
             WalletService walletService,
             OrderService orderService,
             DatabaseContext database)
         {
-            _cartService = cartService;
+            _packageService = packageService;
             _walletService = walletService;
             _orderService = orderService;
             _database = database;
         }
 
-        public async Task<CheckoutResponseDTO> CheckoutAsync(UserContext context, string gameAccountInfo)
+        public async Task<long> PlaceOrderAsync(UserContext context, PlaceOrderRequestDTO request)
         {
-            var cartItems = await _cartService.GetDetailsAsync(context);
-            if (cartItems == null || !cartItems.Any())
-            {
-                throw new BusinessException("Giỏ hàng của bạn đang trống.");
-            }
-
-            decimal totalAmount = cartItems.Sum(item => item.Price * item.Quantity);
-
+            var package = await _packageService.GetPackageByIdAsync(request.GamePackageId);
+            if (!package.IsActive) throw new BusinessException("Gói nạp hiện không khả dụng.");
+            if (package.StockQuantity < request.Quantity) throw new BusinessException("Số lượng trong kho không đủ.");
+            
             return await _database.ExecuteInTransactionAsync(async () =>
             {
-                var txResult = await _walletService.DeductMoneyAsync(context, totalAmount, "Thanh toán đơn hàng từ giỏ hàng.");
+                // WHY: Trừ tồn kho ngay khi đặt hàng để đảm bảo "giữ chỗ" sản phẩm cho khách.
+                await _packageService.DecreaseStockAsync(request.GamePackageId, request.Quantity);
                 
-                var orderIds = await CreateOrdersFromCartAsync(cartItems, context, gameAccountInfo, txResult.TransactionId);
-                
-                await _cartService.ClearAsync(context);
-
-                return new CheckoutResponseDTO { OrderIds = orderIds, TransactionId = txResult.TransactionId };
-            });
-        }
-
-        private async Task<List<long>> CreateOrdersFromCartAsync(IEnumerable<CartDetailDTO> cartItems, UserContext context, string gameAccountInfo, long transactionId)
-        {
-            var orderIds = new List<long>();
-            foreach (var item in cartItems)
-            {
                 var order = new Order
                 {
                     UserId = context.UserId,
-                    GamePackageId = item.ProductId,
-                    UnitPrice = item.Price,
-                    Quantity = item.Quantity,
-                    GameAccountInfo = gameAccountInfo,
+                    GamePackageId = request.GamePackageId,
+                    UnitPrice = package.SalePrice,
+                    Quantity = request.Quantity,
+                    GameAccountInfo = request.GameAccountInfo,
                     Status = OrderStatus.Pending,
-                    WalletTransactionId = transactionId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
+
+                return await _orderService.CreateOrderAsync(order, context);
+            });            
+        }
+
+        public async Task PayOrderAsync(UserContext context, long orderId)
+        {
+            await _database.ExecuteInTransactionAsync(async () => {
+                var order = await _orderService.LockAndGetByIdAsync(orderId);
+                if (order.UserId != context.UserId) throw new BusinessException("Bạn không có quyền thanh toán đơn hàng này.");
+                if (order.Status != OrderStatus.Pending) throw new BusinessException("Đơn hàng không ở trạng thái chờ thanh toán.");
+            
+                // 1. Trừ tiền ví và gắn kết với OrderId
+                await _walletService.DeductMoneyAsync(context, order.Total, $"Thanh toán đơn hàng #{order.Id}", order.Id);
                 
-                var newOrderId = await _orderService.CreateOrder(order, context);
-                orderIds.Add(newOrderId);
-            }
-            return orderIds;
+                // 2. Gọi Service xử lý nghiệp vụ PayOrder (Cập nhật trạng thái & Lịch sử)
+                await _orderService.PayOrderAsync(order, context, "Người dùng thanh toán đơn hàng thành công.");
+            });
+            
         }
 
         public async Task PickOrderAsync(long orderId, UserContext adminContext)
@@ -80,7 +76,7 @@ namespace GameTopUp.BLL.ApplicationServices
             await _database.ExecuteInTransactionAsync(async () =>
             {
                 var order = await _orderService.LockAndGetByIdAsync(orderId);
-                await _orderService.PickOrder(order, adminContext);
+                await _orderService.PickOrderAsync(order, adminContext);
             });
         }
 
@@ -89,7 +85,7 @@ namespace GameTopUp.BLL.ApplicationServices
             await _database.ExecuteInTransactionAsync(async () =>
             {
                 var order = await _orderService.LockAndGetByIdAsync(orderId);
-                await _orderService.CompleteOrder(order, adminContext);
+                await _orderService.CompleteOrderAsync(order, adminContext);
             });
         }
 
@@ -99,12 +95,20 @@ namespace GameTopUp.BLL.ApplicationServices
             {
                 var order = await _orderService.LockAndGetByIdAsync(orderId);
 
-                var isNewCancellation = await _orderService.CancelOrder(order, adminContext, reason);
+                // 1. Thực hiện hủy đơn trong Service để lấy trạng thái cũ
+                var oldStatus = await _orderService.CancelOrderAsync(order, adminContext, reason);
 
-                if (isNewCancellation)
+                if (oldStatus != null)
                 {
-                    var userContext = new UserContext { UserId = order.UserId };
-                    await _walletService.RefundMoneyAsync(userContext, order.Total, $"Hoàn tiền đơn hàng #{orderId}. {reason ?? ""}");
+                    // 2. HOÀN KHO: Vì khi đặt hàng (PlaceOrder) chúng ta đã trừ tồn kho ngay
+                    await _packageService.IncreaseStockAsync(order.GamePackageId, order.Quantity);
+
+                    // 3. HOÀN TIỀN: Chỉ hoàn tiền nếu đơn hàng đã ở trạng thái Paid hoặc Processing
+                    if (oldStatus == OrderStatus.Paid || oldStatus == OrderStatus.Processing)
+                    {
+                        var userContext = new UserContext { UserId = order.UserId };
+                        await _walletService.RefundMoneyAsync(userContext, order.Total, $"Hoàn tiền đơn hàng #{orderId}. {reason ?? ""}", orderId);
+                    }
                 }
             });
         }

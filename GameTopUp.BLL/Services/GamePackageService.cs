@@ -60,8 +60,7 @@ namespace GameTopUp.BLL.Services
                 SalePrice = request.SalePrice,
                 OriginalPrice = request.OriginalPrice,
                 ImportPrice = request.ImportPrice,
-                PackageBudget = request.PackageBudget,
-                SpentAmount = 0,
+                StockQuantity = request.StockQuantity,
                 IsActive = request.IsActive
             };
 
@@ -81,6 +80,26 @@ namespace GameTopUp.BLL.Services
         {
             await GetPackageByIdAsync(id);
             await _packageRepo.DeleteAsync(id);
+        }
+
+        public async Task IncreaseStockAsync(long id, int quantity)
+        {
+            ValidateStockQuantity(quantity);
+
+            await _packageRepo.IncreaseStockAsync(id, quantity);
+        }
+
+        public async Task DecreaseStockAsync(long id, int quantity)
+        {
+            ValidateStockQuantity(quantity);
+
+            var affectedRows = await _packageRepo.DecreaseStockAsync(id, quantity);
+            if (affectedRows == 0) throw new BusinessException("Không đủ số lượng trong kho.");            
+        }
+
+        private void ValidateStockQuantity(int quantity)
+        {
+            if (quantity <= 0) throw new BusinessException("Số lượng phải lớn hơn 0.");
         }
     }
 }

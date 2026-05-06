@@ -49,8 +49,7 @@ CREATE TABLE IF NOT EXISTS game_packages (
     sale_price DECIMAL(18, 2) NOT NULL,
     original_price DECIMAL(18, 2) NOT NULL,
     import_price DECIMAL(18, 2) NOT NULL,
-    package_budget DECIMAL(18, 2) NOT NULL,
-    spent_amount DECIMAL(18, 2) DEFAULT 0.00,
+    stock_quantity INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -75,16 +74,6 @@ CREATE TABLE IF NOT EXISTS game_accounts (
     INDEX idx_accounts_user_sort (user_id, is_default, created_at)
 ) ENGINE=InnoDB;
 
--- 5. Table: cart_items
-CREATE TABLE IF NOT EXISTS cart_items (
-    id BIGINT SIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT SIGNED NOT NULL,
-    game_package_id BIGINT SIGNED NOT NULL,
-    quantity INT NOT NULL DEFAULT 1,
-    CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_cart_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
-    INDEX idx_cart_lookup (user_id, game_package_id)
-) ENGINE=InnoDB;
 
 -- 6. Table: wallet_transactions
 CREATE TABLE IF NOT EXISTS wallet_transactions (
@@ -94,8 +83,10 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     balance_after DECIMAL(18, 2) NOT NULL,
     type INT NOT NULL, -- 1: Deposit, 2: Withdraw, 3: PaidOrder, 4: Refund
     description TEXT,
+    order_id BIGINT SIGNED NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tx_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_tx_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
     INDEX idx_tx_user_sort (user_id, created_at)
 ) ENGINE=InnoDB;
 
@@ -104,20 +95,20 @@ CREATE TABLE IF NOT EXISTS orders (
     id BIGINT SIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT SIGNED NOT NULL,
     game_account_info TEXT NOT NULL,
-    wallet_transaction_id BIGINT SIGNED,
     game_package_id BIGINT SIGNED NOT NULL,
     unit_price DECIMAL(18, 2) NOT NULL,
     quantity INT NOT NULL,
     assign_to BIGINT SIGNED,
     assign_at DATETIME,
-    status INT NOT NULL, -- 1: Pending, 2: Processing, 3: Completed, 4: Cancelled
+    status INT NOT NULL, -- 1: Pending, 2: Paid, 3: Processing, 4: Completed, 5: Cancelled
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
-    CONSTRAINT fk_order_tx FOREIGN KEY (wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL,
     INDEX idx_orders_user_sort (user_id, created_at),
-    INDEX idx_orders_status (status)
+    INDEX idx_orders_status (status),
+    -- Đảm bảo mỗi khách hàng chỉ có tối đa 1 đơn hàng ở trạng thái Pending (1)
+    UNIQUE INDEX idx_one_pending_per_user (user_id, (CASE WHEN status = 1 THEN 1 ELSE NULL END))
 ) ENGINE=InnoDB;
 
 -- 8. Table: order_history

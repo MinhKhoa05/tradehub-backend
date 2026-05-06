@@ -9,7 +9,8 @@ namespace GameTopUp.DAL.Interfaces
         Task<List<GamePackage>> GetByGameIdAsync(long gameId);
         Task<long> CreateAsync(GamePackage gamePackage);
         Task<int> UpdateAsync(GamePackage gamePackage);
-        Task<int> UpdateStockBudgetAsync(long id, decimal spentAmount);
+        Task<int> IncreaseStockAsync(long id, int quantity);
+        Task<int> DecreaseStockAsync(long id, int quantity);
         Task<int> DeleteAsync(long id);
     }
 }
