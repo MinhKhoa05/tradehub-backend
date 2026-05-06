@@ -3,8 +3,6 @@ using GameTopUp.BLL.Services;
 using GameTopUp.BLL.Exceptions;
 using GameTopUp.DAL;
 using GameTopUp.DAL.Entities;
-using GameTopUp.DAL.Interfaces;
-using GameTopUp.DAL.DTOs;
 using GameTopUp.BLL.DTOs.Orders;
 
 namespace GameTopUp.BLL.ApplicationServices
@@ -55,10 +53,12 @@ namespace GameTopUp.BLL.ApplicationServices
             });            
         }
 
-        public async Task PayOrderAsync(UserContext context, long orderId)
+        public async Task PayOrderAsync(long orderId, UserContext context)
         {
             await _database.ExecuteInTransactionAsync(async () => {
+
                 var order = await _orderService.LockAndGetByIdAsync(orderId);
+                
                 if (order.UserId != context.UserId) throw new BusinessException("Bạn không có quyền thanh toán đơn hàng này.");
                 if (order.Status != OrderStatus.Pending) throw new BusinessException("Đơn hàng không ở trạng thái chờ thanh toán.");
             
@@ -66,9 +66,8 @@ namespace GameTopUp.BLL.ApplicationServices
                 await _walletService.DeductMoneyAsync(context, order.Total, $"Thanh toán đơn hàng #{order.Id}", order.Id);
                 
                 // 2. Gọi Service xử lý nghiệp vụ PayOrder (Cập nhật trạng thái & Lịch sử)
-                await _orderService.PayOrderAsync(order, context, "Người dùng thanh toán đơn hàng thành công.");
+                await _orderService.PayOrderAsync(order, context, "Thanh toán đơn hàng thành công.");
             });
-            
         }
 
         public async Task PickOrderAsync(long orderId, UserContext adminContext)

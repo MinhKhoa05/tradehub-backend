@@ -22,10 +22,10 @@ namespace GameTopUp.API.Controllers
         }
 
         [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
+        public async Task<IActionResult> Checkout([FromBody] PlaceOrderRequestDTO request)
         {
             // Truyền UserContext để đảm bảo tính minh bạch và khả năng tái sử dụng logic
-            var result = await _orderUseCase.CheckoutAsync(CurrentUser, request.GameAccountInfo);
+            var result = await _orderUseCase.PlaceOrderAsync(CurrentUser, request);
             return ApiOk(result, "Đặt hàng thành công!");
         }
 
@@ -66,7 +66,14 @@ namespace GameTopUp.API.Controllers
             return ApiOk(null, "Đơn hàng đã được hoàn thành thành công.");
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize]
+        [HttpPost("{orderId}/pay")]
+        public async Task<IActionResult> PayOrder(long orderId)
+        {
+            await _orderUseCase.PayOrderAsync(orderId, CurrentUser);
+            return ApiOk(null, "Thanh toán đơn hàng thành công");
+        }
+
         [HttpPost("{orderId}/cancel")]
         public async Task<IActionResult> CancelOrder(long orderId)
         {

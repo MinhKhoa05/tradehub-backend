@@ -7,7 +7,6 @@ using GameTopUp.BLL.ApplicationServices;
 using GameTopUp.BLL.Common;
 using GameTopUp.BLL.Services;
 using GameTopUp.DAL;
-using GameTopUp.DAL.Queries;
 using GameTopUp.DAL.Repositories;
 using GameTopUp.DAL.Interfaces;
 using GameTopUp.BLL.Config;

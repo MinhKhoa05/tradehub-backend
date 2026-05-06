@@ -154,7 +154,6 @@ namespace GameTopUp.BLL.Services
                 ToStatus = OrderStatus.Cancelled,
                 Note = note,
                 ActionBy = admin.UserId,
-                IsAdmin = admin.IsAdmin,
                 CreatedAt = DateTime.UtcNow
             });
 
