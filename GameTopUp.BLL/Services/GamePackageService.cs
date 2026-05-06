@@ -97,6 +97,14 @@ namespace GameTopUp.BLL.Services
             if (affectedRows == 0) throw new BusinessException("Không đủ số lượng trong kho.");            
         }
 
+        public async Task CheckAvailabilityAsync(long id, int quantity)
+        {
+            ValidateStockQuantity(quantity);
+            var package = await GetPackageByIdAsync(id);
+            if (!package.IsActive) throw new BusinessException("Gói nạp hiện không khả dụng.");
+            if (package.StockQuantity < quantity) throw new BusinessException("Số lượng trong kho không đủ.");
+        }
+
         private void ValidateStockQuantity(int quantity)
         {
             if (quantity <= 0) throw new BusinessException("Số lượng phải lớn hơn 0.");

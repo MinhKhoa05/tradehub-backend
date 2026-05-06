@@ -39,7 +39,6 @@ namespace GameTopUp.Tests.IntegrationTests
                 Name = "Gói 100K", 
                 SalePrice = 100000,
                 ImportPrice = 70000,
-                PackageBudget = 500000,
                 IsActive = true
             };
 

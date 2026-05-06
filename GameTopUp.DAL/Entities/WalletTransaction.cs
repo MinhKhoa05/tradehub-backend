@@ -10,6 +10,7 @@ namespace GameTopUp.DAL.Entities
         public long Id { get; set; }
         public long UserId { get; set; }
         public decimal Amount { get; set; }
+        public decimal BalanceBefore { get; set; }
         public decimal BalanceAfter { get; set; }
         public WalletTransactionType Type { get; set; }
         public string? Description { get; set; }

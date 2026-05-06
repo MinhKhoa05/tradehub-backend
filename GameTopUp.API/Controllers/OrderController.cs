@@ -21,18 +21,33 @@ namespace GameTopUp.API.Controllers
             _orderService = orderService;
         }
 
-        [HttpPost("checkout")]
-        public async Task<IActionResult> Checkout([FromBody] PlaceOrderRequestDTO request)
+        [HttpPost("place")]
+        public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequestDTO request)
         {
             // Truyền UserContext để đảm bảo tính minh bạch và khả năng tái sử dụng logic
             var result = await _orderUseCase.PlaceOrderAsync(CurrentUser, request);
             return ApiOk(result, "Đặt hàng thành công!");
         }
 
+        [HttpPost("{orderId}/pay")]
+        public async Task<IActionResult> PayOrder(long orderId)
+        {
+            await _orderUseCase.PayOrderAsync(orderId, CurrentUser);
+            return ApiOk(null, "Thanh toán đơn hàng thành công");
+        }
+
         [HttpGet("me")]
         public async Task<IActionResult> GetMyOrders([FromQuery] OrderStatus? status = null)
         {
-            var orders = await _orderService.GetOrdersAsync(CurrentUser, status);
+            var orders = await _orderService.GetOrdersByUserAsync(CurrentUser, status);
+            return ApiOk(orders);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public async Task<IActionResult> GetOrders([FromQuery] OrderStatus? status = null)
+        {
+            var orders = await _orderService.GetAllOrdersAsync(status);
             return ApiOk(orders);
         }
 
@@ -64,14 +79,6 @@ namespace GameTopUp.API.Controllers
         {
             await _orderUseCase.CompleteOrderAsync(orderId, CurrentUser);
             return ApiOk(null, "Đơn hàng đã được hoàn thành thành công.");
-        }
-
-        [Authorize]
-        [HttpPost("{orderId}/pay")]
-        public async Task<IActionResult> PayOrder(long orderId)
-        {
-            await _orderUseCase.PayOrderAsync(orderId, CurrentUser);
-            return ApiOk(null, "Thanh toán đơn hàng thành công");
         }
 
         [HttpPost("{orderId}/cancel")]

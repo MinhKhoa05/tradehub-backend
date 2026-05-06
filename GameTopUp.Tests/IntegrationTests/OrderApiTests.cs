@@ -53,8 +53,8 @@ namespace GameTopUp.Tests.IntegrationTests
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<DAL.DatabaseContext>();
-            var sql = @"INSERT INTO game_packages (name, game_id, normalized_name, sale_price, original_price, import_price, package_budget) 
-                        VALUES (@Name, @GameId, @Normalized, @Price, @Price, @Price, 1000); 
+            var sql = @"INSERT INTO game_packages (name, game_id, normalized_name, sale_price, original_price, import_price) 
+                        VALUES (@Name, @GameId, @Normalized, @Price, @Price, @Price); 
                         SELECT last_insert_rowid();";
             return await db.Connection.QuerySingleAsync<long>(sql, new 
             { 
@@ -69,9 +69,8 @@ namespace GameTopUp.Tests.IntegrationTests
         {
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<DAL.DatabaseContext>();
-            // Sử dụng wallet_transaction_id = NULL để đơn giản hóa seeding nếu không test flow transaction cũ
-            var sql = @"INSERT INTO orders (user_id, game_account_info, wallet_transaction_id, game_package_id, unit_price, quantity, status, created_at, updated_at) 
-                        VALUES (@UserId, 'test_acc', NULL, @PackageId, @Price, 1, @Status, @Now, @Now); 
+            var sql = @"INSERT INTO orders (user_id, game_account_info, game_package_id, unit_price, quantity, status, created_at, updated_at) 
+                        VALUES (@UserId, 'test_acc', @PackageId, @Price, 1, @Status, @Now, @Now); 
                         SELECT last_insert_rowid();";
             return await db.Connection.QuerySingleAsync<long>(sql, new 
             { 

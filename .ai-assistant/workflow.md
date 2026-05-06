@@ -1,4 +1,4 @@
-# 🚀 Multi-Agent Workflow
+# 🚀 Multi-Role Workflow
 
 Multi-agent AI system with strict role separation, approval gating, and scope locking. AI acts as the "Orchestrator OS".
 

@@ -18,6 +18,12 @@ namespace GameTopUp.DAL.Repositories
             return await _database.QueryFirstAsync<Wallet>(sql, new { UserId = userId });
         }
 
+        public async Task<Wallet?> GetByUserIdForUpdateAsync(long userId)
+        {
+            string sql = "SELECT * FROM wallets WHERE user_id = @UserId FOR UPDATE";
+            return await _database.QueryFirstAsync<Wallet>(sql, new { UserId = userId });
+        }
+
         public async Task<long> CreateAsync(Wallet wallet)
         {
             return await _database.InsertAsync<Wallet, long>(wallet);
@@ -41,6 +47,17 @@ namespace GameTopUp.DAL.Repositories
             { 
                 UserId = userId, 
                 Amount = amount,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        public async Task<int> UpdateAsync(Wallet wallet)
+        {
+            string sql = "UPDATE wallets SET balance = @Balance, updated_at = @UpdatedAt WHERE id = @Id";
+            return await _database.ExecuteAsync(sql, new 
+            { 
+                Id = wallet.Id,
+                Balance = wallet.Balance,
                 UpdatedAt = DateTime.UtcNow
             });
         }

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS wallet_transactions (
     id BIGINT SIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT SIGNED NOT NULL,
     amount DECIMAL(18, 2) NOT NULL,
+    balance_before DECIMAL(18, 2) NOT NULL,
     balance_after DECIMAL(18, 2) NOT NULL,
     type INT NOT NULL, -- 1: Deposit, 2: Withdraw, 3: PaidOrder, 4: Refund
     description TEXT,
@@ -103,12 +104,13 @@ CREATE TABLE IF NOT EXISTS orders (
     status INT NOT NULL, -- 1: Pending, 2: Paid, 3: Processing, 4: Completed, 5: Cancelled
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_pending TINYINT(1) GENERATED ALWAYS AS (CASE WHEN status = 1 THEN 1 ELSE NULL END) STORED,
     CONSTRAINT fk_order_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_package FOREIGN KEY (game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
     INDEX idx_orders_user_sort (user_id, created_at),
     INDEX idx_orders_status (status),
     -- Đảm bảo mỗi khách hàng chỉ có tối đa 1 đơn hàng ở trạng thái Pending (1)
-    UNIQUE INDEX idx_one_pending_per_user (user_id, (CASE WHEN status = 1 THEN 1 ELSE NULL END))
+    UNIQUE INDEX idx_one_pending_per_user (user_id, is_pending)
 ) ENGINE=InnoDB;
 
 -- 8. Table: order_history

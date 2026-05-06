@@ -134,6 +134,7 @@ builder.Services.AddScoped<WalletService>();
 // ================= APPLICATION SERVICES =================
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<OrderUseCase>();
+builder.Services.AddScoped<WalletUseCase>();
 
 // ================= COMMON SERVICES =================
 builder.Services.AddHttpContextAccessor();

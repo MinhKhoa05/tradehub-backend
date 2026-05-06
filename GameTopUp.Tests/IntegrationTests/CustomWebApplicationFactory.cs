@@ -98,8 +98,7 @@ namespace GameTopUp.Tests.IntegrationTests
                         sale_price REAL NOT NULL,
                         original_price REAL NOT NULL,
                         import_price REAL NOT NULL,
-                        package_budget REAL NOT NULL,
-                        spent_amount REAL DEFAULT 0,
+                        stock_quantity INTEGER NOT NULL DEFAULT 0,
                         is_active INTEGER DEFAULT 1,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -137,11 +136,14 @@ namespace GameTopUp.Tests.IntegrationTests
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         amount REAL NOT NULL,
+                        balance_before REAL NOT NULL,
                         balance_after REAL NOT NULL,
                         type INTEGER NOT NULL,
                         description TEXT,
+                        order_id INTEGER,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        FOREIGN KEY(order_id) REFERENCES orders(id) ON DELETE SET NULL
                     );
                     CREATE INDEX IF NOT EXISTS idx_tx_user_sort ON wallet_transactions(user_id, created_at);
 
@@ -149,7 +151,6 @@ namespace GameTopUp.Tests.IntegrationTests
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
                         game_account_info TEXT NOT NULL,
-                        wallet_transaction_id INTEGER,
                         game_package_id INTEGER NOT NULL,
                         unit_price REAL NOT NULL,
                         quantity INTEGER NOT NULL,
@@ -158,10 +159,11 @@ namespace GameTopUp.Tests.IntegrationTests
                         status INTEGER NOT NULL,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        is_pending INTEGER GENERATED ALWAYS AS (CASE WHEN status = 1 THEN 1 ELSE NULL END) STORED,
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        FOREIGN KEY(game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE,
-                        FOREIGN KEY(wallet_transaction_id) REFERENCES wallet_transactions(id) ON DELETE SET NULL
+                        FOREIGN KEY(game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE
                     );
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_one_pending_per_user ON orders(user_id, is_pending);
                     CREATE INDEX IF NOT EXISTS idx_orders_user_sort ON orders(user_id, created_at);
                     CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 

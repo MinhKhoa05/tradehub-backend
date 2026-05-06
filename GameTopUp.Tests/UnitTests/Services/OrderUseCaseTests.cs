@@ -19,6 +19,7 @@ namespace GameTopUp.Tests.UnitTests.Services
         private readonly Mock<IWalletRepository> _walletRepoMock;
         private readonly Mock<IWalletTransactionRepository> _walletTxRepoMock;
         private readonly Mock<IGamePackageRepository> _packageRepoMock;
+        private readonly Mock<IGameRepository> _gameRepoMock;
         private readonly Mock<DatabaseContext> _dbMock;
         
         private readonly OrderService _orderService;
@@ -33,6 +34,7 @@ namespace GameTopUp.Tests.UnitTests.Services
             _walletRepoMock = new Mock<IWalletRepository>();
             _walletTxRepoMock = new Mock<IWalletTransactionRepository>();
             _packageRepoMock = new Mock<IGamePackageRepository>();
+            _gameRepoMock = new Mock<IGameRepository>();
             
             _dbMock = new Mock<DatabaseContext>(Mock.Of<System.Data.Common.DbConnection>());
             _dbMock.Setup(d => d.ExecuteInTransactionAsync(It.IsAny<Func<Task>>()))
@@ -42,8 +44,8 @@ namespace GameTopUp.Tests.UnitTests.Services
                 .Returns(async (Func<Task<long>> action) => await action());
 
             _orderService = new OrderService(_orderRepoMock.Object, _orderHistoryRepoMock.Object);
-            _walletService = new WalletService(_walletRepoMock.Object, _walletTxRepoMock.Object, _dbMock.Object);
-            _packageService = new GamePackageService(_packageRepoMock.Object);
+            _walletService = new WalletService(_walletRepoMock.Object, _walletTxRepoMock.Object);
+            _packageService = new GamePackageService(_packageRepoMock.Object, _gameRepoMock.Object);
 
             _orderUseCase = new OrderUseCase(_packageService, _walletService, _orderService, _dbMock.Object);
         }
@@ -57,6 +59,7 @@ namespace GameTopUp.Tests.UnitTests.Services
             var package = new GamePackage { Id = 10, SalePrice = 50, IsActive = true, StockQuantity = 10 };
 
             _packageRepoMock.Setup(r => r.GetByIdAsync(10)).ReturnsAsync(package);
+            _packageRepoMock.Setup(r => r.DecreaseStockAsync(10, 2)).ReturnsAsync(1);
             _orderRepoMock.Setup(r => r.HasPendingOrderAsync(context.UserId)).ReturnsAsync(false);
             _orderRepoMock.Setup(r => r.CreateAsync(It.IsAny<Order>())).ReturnsAsync(999);
 
@@ -76,14 +79,15 @@ namespace GameTopUp.Tests.UnitTests.Services
             var context = new UserContext(1, "user", "Customer");
             long orderId = 123;
             var order = new Order { Id = orderId, UserId = context.UserId, Status = OrderStatus.Pending, UnitPrice = 100, Quantity = 1 };
+            var wallet = new Wallet { UserId = context.UserId, Balance = 500 };
 
             _orderRepoMock.Setup(r => r.GetByIdForUpdateAsync(orderId)).ReturnsAsync(order);
-            _walletRepoMock.Setup(r => r.GetByUserIdAsync(context.UserId)).ReturnsAsync(new Wallet { UserId = context.UserId, Balance = 500 });
+            _walletRepoMock.Setup(r => r.GetByUserIdForUpdateAsync(context.UserId)).ReturnsAsync(wallet);
             _walletRepoMock.Setup(r => r.DecreaseBalanceAsync(context.UserId, 100)).ReturnsAsync(1);
             _walletTxRepoMock.Setup(r => r.CreateAsync(It.IsAny<WalletTransaction>())).ReturnsAsync(1);
 
             // Act
-            await _orderUseCase.PayOrderAsync(context, orderId);
+            await _orderUseCase.PayOrderAsync(orderId, context);
 
             // Assert
             _orderRepoMock.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Status == OrderStatus.Paid)), Times.Once);
@@ -95,7 +99,7 @@ namespace GameTopUp.Tests.UnitTests.Services
         {
             // Arrange
             long orderId = 123;
-            var adminContext = new UserContext(2, "admin", "Admin") { IsAdmin = true };
+            var adminContext = new UserContext(2, "admin", "Admin");
             var order = new Order { Id = orderId, Status = OrderStatus.Paid };
 
             _orderRepoMock.Setup(r => r.GetByIdForUpdateAsync(orderId)).ReturnsAsync(order);
@@ -114,11 +118,13 @@ namespace GameTopUp.Tests.UnitTests.Services
             // Arrange
             long orderId = 123;
             long userId = 456;
-            var adminContext = new UserContext(2, "admin", "Admin") { IsAdmin = true };
-            var order = new Order { Id = orderId, UserId = userId, Status = OrderStatus.Paid, UnitPrice = 100, Quantity = 1, GamePackageId = 10 };
+            var adminContext = new UserContext(2, "admin", "Admin");
+            var order = new Order { Id = orderId, UserId = userId, Status = OrderStatus.Paid, UnitPrice = 100, Quantity = 1, GamePackageId = 10, AssignTo = 2 };
+            var wallet = new Wallet { UserId = userId, Balance = 500 };
 
             _orderRepoMock.Setup(r => r.GetByIdForUpdateAsync(orderId)).ReturnsAsync(order);
-            _walletRepoMock.Setup(r => r.GetByUserIdAsync(userId)).ReturnsAsync(new Wallet { UserId = userId, Balance = 500 });
+            _walletRepoMock.Setup(r => r.GetByUserIdForUpdateAsync(userId)).ReturnsAsync(wallet);
+            _walletRepoMock.Setup(r => r.IncreaseBalanceAsync(userId, 100)).ReturnsAsync(1);
             
             // Act
             await _orderUseCase.CancelOrderAsync(orderId, adminContext);
@@ -135,8 +141,8 @@ namespace GameTopUp.Tests.UnitTests.Services
             // Arrange
             long orderId = 123;
             long userId = 456;
-            var adminContext = new UserContext(2, "admin", "Admin") { IsAdmin = true };
-            var order = new Order { Id = orderId, UserId = userId, Status = OrderStatus.Pending, UnitPrice = 100, Quantity = 1, GamePackageId = 10 };
+            var adminContext = new UserContext(2, "admin", "Admin");
+            var order = new Order { Id = orderId, UserId = userId, Status = OrderStatus.Pending, UnitPrice = 100, Quantity = 1, GamePackageId = 10, AssignTo = 2 };
 
             _orderRepoMock.Setup(r => r.GetByIdForUpdateAsync(orderId)).ReturnsAsync(order);
 

@@ -16,6 +16,12 @@ namespace GameTopUp.DAL.Repositories
             _database = database;
         }
 
+        public async Task<List<Order>> GetAllAsync(OrderStatus? status = null)
+        {
+            var sql = "SELECT * FROM orders WHERE (@Status IS NULL OR status = @Status) ORDER BY created_at DESC";
+            return await _database.QueryAsync<Order>(sql, new { Status = status });
+        }
+
         public async Task<Order?> GetByIdAsync(long orderId)
         {
             var sql = "SELECT * FROM orders WHERE id = @Id";
@@ -76,24 +82,14 @@ namespace GameTopUp.DAL.Repositories
             return await _database.InsertAsync<Order, long>(order);
         }
 
-        public async Task<int> UpdateStatusAsync(long orderId, OrderStatus newStatus)
-        {
-            var sql = "UPDATE orders SET status = @Status, updated_at = CURRENT_TIMESTAMP WHERE id = @Id";
-            
-            return await _database.ExecuteAsync(sql, new 
-            { 
-                Id = orderId, 
-                Status = newStatus 
-            });
-        }
-
         public async Task<bool> HasPendingOrderAsync(long userId)
         {
-            var sql = "SELECT COUNT(1) FROM orders WHERE user_id = @UserId AND status = @Status";
+            // WHY: Sử dụng cột is_pending (Generated Column) để tận dụng index idx_one_pending_per_user,
+            // giúp kiểm tra nhanh chóng mà không cần quét toàn bộ trạng thái.
+            var sql = "SELECT COUNT(1) FROM orders WHERE user_id = @UserId AND is_pending = 1";
             var count = await _database.QueryFirstAsync<int>(sql, new 
             { 
-                UserId = userId, 
-                Status = OrderStatus.Pending 
+                UserId = userId
             });
             return count > 0;
         }

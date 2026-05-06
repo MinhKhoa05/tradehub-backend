@@ -21,9 +21,14 @@ namespace GameTopUp.BLL.Services
             return await _orderRepo.HasPendingOrderAsync(userId);
         }
 
-        public async Task<List<Order>> GetOrdersAsync(UserContext context, OrderStatus? status = null)
+        public async Task<List<Order>> GetOrdersByUserAsync(UserContext context, OrderStatus? status = null)
         {
             return await _orderRepo.GetByUserIdAsync(context.UserId, status);
+        }
+
+        public async Task<List<Order>> GetAllOrdersAsync(OrderStatus? status = null)
+        {
+            return await _orderRepo.GetAllAsync(status);
         }
 
         public async Task<List<OrderHistory>> GetHistoriesAsync(long orderId)
@@ -50,31 +55,43 @@ namespace GameTopUp.BLL.Services
                 throw new BusinessException("Bạn đang có một đơn hàng chờ thanh toán. Vui lòng hoàn tất hoặc hủy đơn hàng đó trước khi tạo đơn mới.");
             }
 
-            var newOrderId = await _orderRepo.CreateAsync(order);
-            order.Id = newOrderId;
-
-            // WHY: Lưu trữ log lịch sử ngay khi khởi tạo đơn hàng để dễ tracking dòng đời Order.
-            await _orderHistoryRepo.CreateAsync(new OrderHistory
+            try
             {
-                OrderId = newOrderId,
-                FromStatus = order.Status,
-                ToStatus = order.Status,
-                Note = "Đơn hàng được tạo (Chờ thanh toán).",
-                ActionBy = user.UserId,
-                IsAdmin = false,
-                CreatedAt = DateTime.UtcNow
-            });
+                var newOrderId = await _orderRepo.CreateAsync(order);
+                order.Id = newOrderId;
 
-            return newOrderId;
+                // WHY: Lưu trữ log lịch sử ngay khi khởi tạo đơn hàng để dễ tracking dòng đời Order.
+                await _orderHistoryRepo.CreateAsync(new OrderHistory
+                {
+                    OrderId = newOrderId,
+                    FromStatus = order.Status,
+                    ToStatus = order.Status,
+                    Note = "Đơn hàng được tạo (Chờ thanh toán).",
+                    ActionBy = user.UserId,
+                    IsAdmin = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                return newOrderId;
+            }
+            catch (Exception ex) when (ex.Message.Contains("Duplicate", StringComparison.OrdinalIgnoreCase) || 
+                                      ex.Message.Contains("UNIQUE", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BusinessException("Bạn đang có một đơn hàng đang chờ thanh toán. Vui lòng thực hiện thanh toán hoặc hủy đơn hàng đó trước khi tạo đơn mới.");
+            }
         }
 
         public async Task PickOrderAsync(Order order, UserContext admin)
         {
-            // WHY: Tránh lỗi giao diện khi Admin bấm "Tiếp nhận" liên tiếp nhiều lần (Idempotent).
+            // Idempotent: admin đã nhận rồi -> bỏ qua
             if (order.Status == OrderStatus.Processing && order.AssignTo == admin.UserId)
                 return;
 
-            // WHY: Chỉ cho phép Admin nhận các đơn hàng ĐÃ THANH TOÁN (Paid).
+            // Đã có admin khác xử lý
+            if (order.Status == OrderStatus.Processing)
+                throw new BusinessException("Đơn hàng đã được admin khác tiếp nhận.");
+
+            // Chỉ cho phép nhận đơn đã thanh toán
             if (order.Status != OrderStatus.Paid)
                 throw new BusinessException("Chỉ có thể tiếp nhận đơn hàng đã thanh toán.");
 
@@ -132,11 +149,23 @@ namespace GameTopUp.BLL.Services
             });
         }
 
-        public async Task<OrderStatus?> CancelOrderAsync(Order order, UserContext admin, string? reason = null)
+        public async Task<OrderStatus?> CancelOrderAsync(Order order, UserContext user, string? reason = null)
         {
-            // WHY: Trả về trạng thái cũ để UseCase biết có cần hoàn tiền/hoàn kho hay không.
-            if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
-                return null;
+            // Idempotency: Nếu đơn hàng đã hủy thì không làm gì nữa và trả về null để UseCase không gọi hoàn tiền.
+            if (order.Status == OrderStatus.Cancelled) return null;
+
+            if (order.Status == OrderStatus.Completed)
+                throw new BusinessException("Đơn hàng đã hoàn thành không thể hủy.");
+
+            bool isOwner = order.UserId == user.UserId;
+            bool isAssignedAdmin = order.AssignTo == user.UserId;
+
+            if (!isOwner && !isAssignedAdmin)
+                throw new ForbiddenException("Bạn không thể can thiệp vào đơn hàng của người khác.");
+            
+            // User thường không được huỷ khi đang processing
+            if (order.Status == OrderStatus.Processing && order.UserId == user.UserId)
+                throw new ForbiddenException("Đơn hàng đang được xử lý, không thể hủy.");
 
             var oldStatus = order.Status;
 
@@ -153,16 +182,26 @@ namespace GameTopUp.BLL.Services
                 FromStatus = oldStatus,
                 ToStatus = OrderStatus.Cancelled,
                 Note = note,
-                ActionBy = admin.UserId,
+                ActionBy = user.UserId,
                 CreatedAt = DateTime.UtcNow
             });
 
             return oldStatus;
         }
 
-        public async Task PayOrderAsync(Order order, UserContext user, string note)
+        public void ValidateForPayment(Order order, UserContext user)
         {
-            var fromStatus = OrderStatus.Pending; 
+            // WHY: Đưa logic nghiệp vụ xuống Service để UseCase chỉ đóng vai trò điều phối (Orchestration).
+            if (order.UserId != user.UserId) 
+                throw new BusinessException("Bạn không có quyền thanh toán đơn hàng này.");
+                
+            if (order.Status != OrderStatus.Pending) 
+                throw new BusinessException("Đơn hàng không ở trạng thái chờ thanh toán.");
+        }
+
+        public async Task MarkAsPaidAsync(Order order, UserContext user)
+        {
+            var fromStatus = order.Status; 
             order.Status = OrderStatus.Paid; 
             order.UpdatedAt = DateTime.UtcNow;
             
@@ -173,7 +212,7 @@ namespace GameTopUp.BLL.Services
                 OrderId = order.Id,
                 FromStatus = fromStatus, 
                 ToStatus = order.Status,
-                Note = note,
+                Note = "Thanh toán đơn hàng thành công.",
                 ActionBy = user.UserId,
                 IsAdmin = false,
                 CreatedAt = DateTime.UtcNow

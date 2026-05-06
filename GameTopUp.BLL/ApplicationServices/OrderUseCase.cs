@@ -28,10 +28,11 @@ namespace GameTopUp.BLL.ApplicationServices
 
         public async Task<long> PlaceOrderAsync(UserContext context, PlaceOrderRequestDTO request)
         {
-            var package = await _packageService.GetPackageByIdAsync(request.GamePackageId);
-            if (!package.IsActive) throw new BusinessException("Gói nạp hiện không khả dụng.");
-            if (package.StockQuantity < request.Quantity) throw new BusinessException("Số lượng trong kho không đủ.");
+            // WHY: Đưa logic kiểm tra nghiệp vụ xuống Service.
+            await _packageService.CheckAvailabilityAsync(request.GamePackageId, request.Quantity);
             
+            var package = await _packageService.GetPackageByIdAsync(request.GamePackageId);
+
             return await _database.ExecuteInTransactionAsync(async () =>
             {
                 // WHY: Trừ tồn kho ngay khi đặt hàng để đảm bảo "giữ chỗ" sản phẩm cho khách.
@@ -55,18 +56,26 @@ namespace GameTopUp.BLL.ApplicationServices
 
         public async Task PayOrderAsync(long orderId, UserContext context)
         {
-            await _database.ExecuteInTransactionAsync(async () => {
-
+            await _database.ExecuteInTransactionAsync(async () =>
+            {
+                // 1. Khóa và lấy thông tin đơn hàng
                 var order = await _orderService.LockAndGetByIdAsync(orderId);
                 
-                if (order.UserId != context.UserId) throw new BusinessException("Bạn không có quyền thanh toán đơn hàng này.");
-                if (order.Status != OrderStatus.Pending) throw new BusinessException("Đơn hàng không ở trạng thái chờ thanh toán.");
-            
-                // 1. Trừ tiền ví và gắn kết với OrderId
-                await _walletService.DeductMoneyAsync(context, order.Total, $"Thanh toán đơn hàng #{order.Id}", order.Id);
-                
-                // 2. Gọi Service xử lý nghiệp vụ PayOrder (Cập nhật trạng thái & Lịch sử)
-                await _orderService.PayOrderAsync(order, context, "Thanh toán đơn hàng thành công.");
+                // 2. Validate nghiệp vụ (ownership, status)
+                _orderService.ValidateForPayment(order, context);
+
+                // 3. Khóa ví và trừ tiền
+                // WHY: Phải trừ tiền thành công trước khi cập nhật trạng thái đơn hàng.
+                var wallet = await _walletService.LockAndGetByUserIdAsync(context.UserId);
+                await _walletService.DebitAsync(
+                    wallet, 
+                    order.Total, 
+                    WalletTransactionType.PaidOrder, 
+                    $"Thanh toán đơn hàng #{order.Id}", 
+                    order.Id);
+
+                // 4. Cập nhật trạng thái đơn hàng sang Paid
+                await _orderService.MarkAsPaidAsync(order, context);
             });
         }
 
@@ -97,17 +106,18 @@ namespace GameTopUp.BLL.ApplicationServices
                 // 1. Thực hiện hủy đơn trong Service để lấy trạng thái cũ
                 var oldStatus = await _orderService.CancelOrderAsync(order, adminContext, reason);
 
-                if (oldStatus != null)
-                {
-                    // 2. HOÀN KHO: Vì khi đặt hàng (PlaceOrder) chúng ta đã trừ tồn kho ngay
-                    await _packageService.IncreaseStockAsync(order.GamePackageId, order.Quantity);
+                // 2. Đơn hàng đã xử lý trước đó rồi thì không cần làm gì nữa
+                if (oldStatus == null) return;
 
-                    // 3. HOÀN TIỀN: Chỉ hoàn tiền nếu đơn hàng đã ở trạng thái Paid hoặc Processing
-                    if (oldStatus == OrderStatus.Paid || oldStatus == OrderStatus.Processing)
-                    {
-                        var userContext = new UserContext { UserId = order.UserId };
-                        await _walletService.RefundMoneyAsync(userContext, order.Total, $"Hoàn tiền đơn hàng #{orderId}. {reason ?? ""}", orderId);
-                    }
+                // 3. HOÀN KHO: Vì khi đặt hàng (PlaceOrder) chúng ta đã trừ tồn kho
+                await _packageService.IncreaseStockAsync(order.GamePackageId, order.Quantity);
+
+                // 4. HOÀN TIỀN: Chỉ hoàn tiền nếu đơn hàng đã ở trạng thái Paid hoặc Processing
+                if (oldStatus == OrderStatus.Paid || oldStatus == OrderStatus.Processing)
+                {
+                    // WHY: Khóa ví trước khi hoàn tiền để tránh Race Condition (Pessimistic Locking).
+                    var wallet = await _walletService.LockAndGetByUserIdAsync(order.UserId);
+                    await _walletService.CreditAsync(wallet, order.Total, WalletTransactionType.Refund, $"Hoàn tiền đơn hàng #{orderId}. {reason ?? ""}", orderId);
                 }
             });
         }

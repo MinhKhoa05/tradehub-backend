@@ -23,14 +23,14 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task PickOrder_ShouldSucceed_WhenOrderIsPending()
+        public async Task PickOrderAsync_ShouldSucceed_WhenOrderIsPaid()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Id = 123, Status = OrderStatus.Pending, AssignTo = 0 };
+            var order = new Order { Id = 123, Status = OrderStatus.Paid, AssignTo = 0 };
 
             // Act
-            await _orderService.PickOrder(order, admin);
+            await _orderService.PickOrderAsync(order, admin);
 
             // Assert
             order.Status.Should().Be(OrderStatus.Processing);
@@ -41,44 +41,44 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task PickOrder_ShouldThrowBusinessException_WhenOrderNotPending()
+        public async Task PickOrderAsync_ShouldThrowBusinessException_WhenOrderNotPaid()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Status = OrderStatus.Cancelled };
+            var order = new Order { Status = OrderStatus.Pending };
 
             // Act
-            Func<Task> act = () => _orderService.PickOrder(order, admin);
+            Func<Task> act = () => _orderService.PickOrderAsync(order, admin);
 
             // Assert
             await act.Should().ThrowAsync<BusinessException>()
-                .WithMessage("Đơn hàng không còn ở trạng thái chờ.");
+                .WithMessage("Chỉ có thể tiếp nhận đơn hàng đã thanh toán.");
         }
 
         [Fact]
-        public async Task PickOrder_ShouldThrowBusinessException_WhenOrderAlreadyAssigned()
+        public async Task PickOrderAsync_ShouldThrowBusinessException_WhenOrderAlreadyAssigned()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Status = OrderStatus.Pending, AssignTo = 2 };
+            var order = new Order { Status = OrderStatus.Processing, AssignTo = 2 };
 
             // Act
-            Func<Task> act = () => _orderService.PickOrder(order, admin);
+            Func<Task> act = () => _orderService.PickOrderAsync(order, admin);
 
             // Assert
             await act.Should().ThrowAsync<BusinessException>()
-                .WithMessage("Đơn hàng đã được tiếp nhận bởi người khác.");
+                .WithMessage("Đơn hàng đã được admin khác tiếp nhận.");
         }
 
         [Fact]
-        public async Task CompleteOrder_ShouldSucceed_WhenValid()
+        public async Task CompleteOrderAsync_ShouldSucceed_WhenValid()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
             var order = new Order { Id = 123, Status = OrderStatus.Processing, AssignTo = admin.UserId };
 
             // Act
-            await _orderService.CompleteOrder(order, admin);
+            await _orderService.CompleteOrderAsync(order, admin);
 
             // Assert
             order.Status.Should().Be(OrderStatus.Completed);
@@ -88,14 +88,14 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CompleteOrder_ShouldThrowBusinessException_WhenOrderNotProcessing()
+        public async Task CompleteOrderAsync_ShouldThrowBusinessException_WhenOrderNotProcessing()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Status = OrderStatus.Pending, AssignTo = admin.UserId };
+            var order = new Order { Status = OrderStatus.Paid, AssignTo = admin.UserId };
 
             // Act
-            Func<Task> act = () => _orderService.CompleteOrder(order, admin);
+            Func<Task> act = () => _orderService.CompleteOrderAsync(order, admin);
 
             // Assert
             await act.Should().ThrowAsync<BusinessException>()
@@ -103,14 +103,14 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CompleteOrder_ShouldThrowBusinessException_WhenAssignedToAnotherAdmin()
+        public async Task CompleteOrderAsync_ShouldThrowBusinessException_WhenAssignedToAnotherAdmin()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
             var order = new Order { Status = OrderStatus.Processing, AssignTo = 999 };
 
             // Act
-            Func<Task> act = () => _orderService.CompleteOrder(order, admin);
+            Func<Task> act = () => _orderService.CompleteOrderAsync(order, admin);
 
             // Assert
             await act.Should().ThrowAsync<BusinessException>()
@@ -118,17 +118,17 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CancelOrder_ShouldSucceed_WhenValid()
+        public async Task CancelOrderAsync_ShouldSucceed_WhenValid()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Id = 123, Status = OrderStatus.Pending };
+            var order = new Order { Id = 123, Status = OrderStatus.Pending, UserId = 999, AssignTo = admin.UserId };
 
             // Act
-            var result = await _orderService.CancelOrder(order, admin);
+            var result = await _orderService.CancelOrderAsync(order, admin);
 
             // Assert
-            result.Should().BeTrue();
+            result.Should().Be(OrderStatus.Pending);
             order.Status.Should().Be(OrderStatus.Cancelled);
             
             _orderRepoMock.Verify(r => r.UpdateAsync(It.Is<Order>(o => o.Id == 123 && o.Status == OrderStatus.Cancelled)), Times.Once);
@@ -136,34 +136,34 @@ namespace GameTopUp.Tests.UnitTests.Services
         }
 
         [Fact]
-        public async Task CancelOrder_ShouldBeIdempotent_WhenAlreadyCancelled()
+        public async Task CancelOrderAsync_ShouldBeIdempotent_WhenAlreadyCancelled()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
             var order = new Order { Status = OrderStatus.Cancelled };
 
             // Act
-            var result = await _orderService.CancelOrder(order, admin);
+            var result = await _orderService.CancelOrderAsync(order, admin);
 
             // Assert
-            result.Should().BeFalse();
+            result.Should().BeNull();
             _orderRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Order>()), Times.Never);
             _orderHistoryRepoMock.Verify(r => r.CreateAsync(It.IsAny<OrderHistory>()), Times.Never);
         }
 
         [Fact]
-        public async Task CancelOrder_ShouldThrowBusinessException_WhenOrderNotPending()
+        public async Task CancelOrderAsync_ShouldThrowBusinessException_WhenOrderCompleted()
         {
             // Arrange
             var admin = new UserContext(1, "admin", "Admin");
-            var order = new Order { Status = OrderStatus.Processing };
+            var order = new Order { Status = OrderStatus.Completed };
 
             // Act
-            Func<Task> act = () => _orderService.CancelOrder(order, admin);
+            Func<Task> act = () => _orderService.CancelOrderAsync(order, admin);
 
             // Assert
             await act.Should().ThrowAsync<BusinessException>()
-                .WithMessage("Không thể hủy đơn hàng đang ở trạng thái này.");
+                .WithMessage("Đơn hàng đã hoàn thành không thể hủy.");
         }
     }
 }

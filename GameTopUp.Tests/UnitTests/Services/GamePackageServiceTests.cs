@@ -34,8 +34,7 @@ namespace GameTopUp.Tests.UnitTests.Services
                 GameId = 1, 
                 Name = "999 Kim Cương", 
                 SalePrice = 150000, 
-                ImportPrice = 100000,
-                PackageBudget = 1000000
+                ImportPrice = 100000
             };
             
             _gameRepoMock.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(game);

@@ -18,7 +18,7 @@ Implement a robust cancellation flow that handles both stock restoration and wal
 - **`PickOrderAsync`**: Ensure it only allows picking orders in `Paid` status. Transition to `Processing`.
 - **`CancelOrderAsync`**: 
     - Change return type to `OrderStatus?` (returns the original status before cancellation if successful, or null if already cancelled).
-    - Allow cancellation from `Pending`, `Paid`, or `Processing`.
+    - Allow cancellation from `Pending`, `Paid`.
 
 ### 3. Application Services (`OrderUseCase.cs`)
 - **`CancelOrderAsync`**:
@@ -27,7 +27,7 @@ Implement a robust cancellation flow that handles both stock restoration and wal
         2. Call `_orderService.CancelOrderAsync` -> get `oldStatus`.
         3. If `oldStatus` is not null:
             - **Restock**: Call `_packageService.IncreaseStockAsync`.
-            - **Refund**: If `oldStatus` was `Paid` or `Processing`, call `_walletService.RefundMoneyAsync`.
+            - **Refund**: If `oldStatus` was `Paid`, call `_walletService.RefundMoneyAsync`.
             - Record log.
 
 ### 4. Database Schema (`schema.sql`)
