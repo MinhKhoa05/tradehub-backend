@@ -32,7 +32,7 @@ Example:
 
 Must include:
 - Objective
-- Reference Memory (Confirm check of `memory.md` & `rules.md`)
+- Reference Memory (Confirm check of `learning.md` & `rules.md`)
 - File changes (Create / Modify / Delete)
 - Impact / Risk
 
@@ -73,7 +73,7 @@ No silent expansion allowed.
 All agents MUST reference:
 - `architecture.md`
 - `rules.md`
-- `memory.md`
+- `learning.md`
 
 If already known → do NOT reprocess or re-explain.
 

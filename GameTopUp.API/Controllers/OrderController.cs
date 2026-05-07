@@ -24,9 +24,8 @@ namespace GameTopUp.API.Controllers
         [HttpPost("place")]
         public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequestDTO request)
         {
-            // Truyền UserContext để đảm bảo tính minh bạch và khả năng tái sử dụng logic
             var result = await _orderUseCase.PlaceOrderAsync(CurrentUser, request);
-            return ApiOk(result, "Đặt hàng thành công!");
+            return ApiCreated(result, "Đặt hàng thành công!");
         }
 
         [HttpPost("{orderId}/pay")]

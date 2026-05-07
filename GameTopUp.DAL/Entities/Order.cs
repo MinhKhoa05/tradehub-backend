@@ -19,8 +19,8 @@ namespace GameTopUp.DAL.Entities
         [NotMapped]
         public decimal Total => UnitPrice * Quantity;
 
-        public long AssignTo { get; set; } // Admin đang nhận xử lý
-        public DateTime AssignAt { get; set; } // Thời điểm admin nhận xử lý
+        public long? AssignTo { get; set; } // Admin đang nhận xử lý
+        public DateTime? AssignAt { get; set; } // Thời điểm admin nhận xử lý
 
         public OrderStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }

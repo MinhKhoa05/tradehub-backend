@@ -16,10 +16,15 @@ namespace GameTopUp.Tests.IntegrationTests
 
         protected override Task<AuthenticateResult> HandleAuthenticateAsync()
         {
+            // Allow dynamic UserID and Role via headers for multi-user testing
+            var userId = Context.Request.Headers["X-Test-UserId"].FirstOrDefault() ?? "1";
+            var role = Context.Request.Headers["X-Test-Role"].FirstOrDefault() ?? "Admin";
+            var username = Context.Request.Headers["X-Test-Username"].FirstOrDefault() ?? "TestUser";
+
             var claims = new[] { 
-                new Claim(ClaimTypes.Name, "TestAdmin"),
-                new Claim(ClaimTypes.Role, "Admin"),
-                new Claim(ClaimTypes.NameIdentifier, "1")
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, role),
+                new Claim(ClaimTypes.NameIdentifier, userId)
             };
             var identity = new ClaimsIdentity(claims, "Test");
             var principal = new ClaimsPrincipal(identity);

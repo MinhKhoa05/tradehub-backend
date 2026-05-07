@@ -103,10 +103,32 @@ namespace GameTopUp.Tests.IntegrationTests
             return await db.Connection.QuerySingleAsync<int>("SELECT COUNT(*) FROM order_history WHERE order_id = @OrderId", new { OrderId = orderId });
         }
 
+        private async Task UpdatePackageStockAsync(long packageId, int stock)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DAL.DatabaseContext>();
+            var sql = "UPDATE game_packages SET stock_quantity = @Stock WHERE id = @Id";
+            await db.Connection.ExecuteAsync(sql, new { Stock = stock, Id = packageId });
+        }
+
+        private async Task UpdatePackageStatusAsync(long packageId, bool isActive)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DAL.DatabaseContext>();
+            var sql = "UPDATE game_packages SET is_active = @IsActive WHERE id = @Id";
+            await db.Connection.ExecuteAsync(sql, new { IsActive = isActive ? 1 : 0, Id = packageId });
+        }
+
+        private async Task<int> GetPackageStockAsync(long packageId)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<DAL.DatabaseContext>();
+            return await db.Connection.QuerySingleAsync<int>("SELECT stock_quantity FROM game_packages WHERE id = @Id", new { Id = packageId });
+        }
+
         #endregion
 
-        /* COMMENTED OUT TEMPORARILY AS SQLITE DOES NOT SUPPORT 'FOR UPDATE'
-        [Fact]
+        [Fact(Skip = "SQLite does not support 'FOR UPDATE'. Migration to Testcontainers MySQL is planned to verify Race Conditions.")]
         public async Task PickOrder_ConcurrentRequests_OnlyOneShouldSucceed()
         {
             // Arrange
@@ -140,7 +162,7 @@ namespace GameTopUp.Tests.IntegrationTests
             order.AssignTo.Should().Be(1); // TestAuthHandler hardcoded ID 1
         }
 
-        [Fact]
+        [Fact(Skip = "SQLite does not support 'FOR UPDATE'. Migration to Testcontainers MySQL is planned to verify Race Conditions.")]
         public async Task CancelOrder_ConcurrentRequests_AllShouldReturnOk_ButOnlyOneRefund()
         {
             // Arrange
@@ -183,20 +205,31 @@ namespace GameTopUp.Tests.IntegrationTests
             historyCount.Should().Be(1);
         }
 
-        [Fact]
+        [Fact(Skip = "SQLite does not support 'FOR UPDATE' locking. Planned for MySQL Testcontainers.")]
         public async Task CompleteOrder_ShouldSucceed_WhenAdminCompletesAssignedOrder()
         {
             // Arrange
             var gameId = await SeedGameAsync("Game Complete");
             var packageId = await SeedGamePackageAsync(gameId, "Pkg Complete", 100);
             var customerId = await SeedUserAsync("cust_comp", "cust_comp@test.com");
-            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Pending);
+            // Đơn hàng phải được THANH TOÁN (Paid) thì Admin mới Pick được
+            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Paid);
+
+            // Seed Admin để đảm bảo ID tồn tại trong DB cho FK AssignTo
+            var adminId = await SeedUserAsync("admin_comp", "admin_comp@test.com");
 
             // Admin picks the order first
-            await _client.PostAsync($"/api/orders/{orderId}/pick", null);
+            var pickRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{orderId}/pick");
+            pickRequest.Headers.Add("X-Test-UserId", adminId.ToString());
+            pickRequest.Headers.Add("X-Test-Role", "Admin");
+            var pickResponse = await _client.SendAsync(pickRequest);
+            pickResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
             // Act
-            var response = await _client.PostAsync($"/api/orders/{orderId}/complete", null);
+            var completeRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/orders/{orderId}/complete");
+            completeRequest.Headers.Add("X-Test-UserId", adminId.ToString());
+            completeRequest.Headers.Add("X-Test-Role", "Admin");
+            var response = await _client.SendAsync(completeRequest);
 
             // Assert
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -208,14 +241,15 @@ namespace GameTopUp.Tests.IntegrationTests
             historyCount.Should().Be(2); // 1 for Pick, 1 for Complete
         }
 
-        [Fact]
+        [Fact(Skip = "SQLite does not support 'FOR UPDATE'. Migration to Testcontainers MySQL is planned to verify Race Conditions.")]
         public async Task CompleteOrder_ConcurrentRequests_ShouldBeIdempotent()
         {
             // Arrange
             var gameId = await SeedGameAsync("Game Comp Race");
             var packageId = await SeedGamePackageAsync(gameId, "Pkg Comp Race", 100);
             var customerId = await SeedUserAsync("cust_race", "cust_race@test.com");
-            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Pending);
+            // Đơn hàng phải được THANH TOÁN (Paid) thì Admin mới Pick được
+            var orderId = await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Paid);
 
             // Admin picks the order
             await _client.PostAsync($"/api/orders/{orderId}/pick", null);
@@ -244,14 +278,168 @@ namespace GameTopUp.Tests.IntegrationTests
             var historyCount = await GetOrderHistoryCountAsync(orderId);
             historyCount.Should().Be(2);
         }
-        */
+        
+        #region PlaceOrder Tests
 
-        // Helper class for deserializing ApiResponse in tests
-        private class ApiResponseTestWrapper<T>
+        [Fact]
+        public async Task PlaceOrder_HappyPath_ShouldCreateOrderAndDecreaseStock()
         {
-            public bool Success { get; set; }
-            public T? Data { get; set; }
-            public string? Message { get; set; }
+            // Arrange
+            var gameId = await SeedGameAsync("Happy Game");
+            var packageId = await SeedGamePackageAsync(gameId, "Happy Pkg", 100);
+            await UpdatePackageStockAsync(packageId, 10);
+            
+            // Seed User mới để đảm bảo không bị trùng Pending Order từ các test case khác
+            var customerId = await SeedUserAsync("happy_customer", "happy@test.com");
+            
+            var request = new { GamePackageId = packageId, Quantity = 2, GameAccountInfo = "player_123" };
+
+            // Act
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/orders/place")
+            {
+                Content = JsonContent.Create(request)
+            };
+            httpRequest.Headers.Add("X-Test-UserId", customerId.ToString());
+            httpRequest.Headers.Add("X-Test-Role", "Customer");
+
+            var response = await _client.SendAsync(httpRequest);
+            
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponseTestWrapper<long>>();
+            var orderId = result!.Data;
+            
+            // Assert
+            // USER_TASK: Kiểm tra response status là OK hoặc Created.
+            // Kiểm tra trong DB xem đơn hàng đã được tạo chưa (status Pending, UserId, Quantity...).
+            // Kiểm tra xem Stock của package có giảm đi đúng 2 đơn vị không.
+            // // TODO: USER IMPLEMENT
+            var order = await GetOrderFromDbAsync(orderId);
+            order!.Status.Should().Be(OrderStatus.Pending);
+
+            var stockQuantity = await GetPackageStockAsync(packageId);
+            stockQuantity.Should().Be(8); // Ban đầu là 10, mua 2, kiểm tra còn 8.
         }
+
+        [Fact]
+        public async Task PlaceOrder_InsufficientStock_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Stock Game");
+            var packageId = await SeedGamePackageAsync(gameId, "Low Stock Pkg", 100);
+            await UpdatePackageStockAsync(packageId, 1); // Chỉ còn 1
+            
+            var request = new { GamePackageId = packageId, Quantity = 5, GameAccountInfo = "player_456" };
+
+            // Act
+            // USER_TASK: Gọi API đặt hàng với số lượng vượt quá tồn kho.
+            // // TODO: USER IMPLEMENT
+            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+
+            // Assert
+            // USER_TASK: Verify status code là BadRequest (400).
+            // Verify Stock trong DB không bị thay đổi (vẫn là 1).
+            // // TODO: USER IMPLEMENT
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var stockQuantity = await GetPackageStockAsync(packageId);
+            stockQuantity.Should().Be(1); // Stock không thay đổi.
+        }
+
+        [Fact]
+        public async Task PlaceOrder_InactivePackage_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Inactive Game");
+            var packageId = await SeedGamePackageAsync(gameId, "Inactive Pkg", 100);
+            await UpdatePackageStatusAsync(packageId, false);
+            
+            var request = new { GamePackageId = packageId, Quantity = 1, GameAccountInfo = "player_inactive" };
+
+            // Act
+            // USER_TASK: Gọi API đặt hàng với gói game đã bị disable.
+            // // TODO: USER IMPLEMENT
+            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+
+            // Assert
+            // USER_TASK: Verify status code là BadRequest (400).
+            // // TODO: USER IMPLEMENT
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task PlaceOrder_OnePendingOrderLimit_ShouldReturnBadRequest()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Limit Game");
+            var packageId = await SeedGamePackageAsync(gameId, "Limit Pkg", 100);
+            
+            // Seed User để tránh FK error
+            var customerId = await SeedUserAsync("limit_user", "limit@test.com");
+            
+            // Giả lập đã có 1 đơn hàng Pending
+            await SeedOrderAsync(customerId, packageId, 100, OrderStatus.Pending);
+            
+            var request = new { GamePackageId = packageId, Quantity = 1, GameAccountInfo = "player_limit" };
+
+            // Act
+            // USER_TASK: Gọi API đặt hàng lần thứ hai khi đơn trước chưa xử lý/thanh toán.
+            // // TODO: USER IMPLEMENT
+            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+
+            // Assert
+            // USER_TASK: Verify status code là BadRequest (400) do vi phạm rule "mỗi user chỉ có 1 đơn Pending".
+            // // TODO: USER IMPLEMENT
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact(Skip = "SQLite limitations with concurrent writes/locks. Planned for MySQL Testcontainers.")]
+        public async Task PlaceOrder_Concurrent_ShouldNotExceedStock()
+        {
+            // Arrange
+            var gameId = await SeedGameAsync("Race Game");
+            var packageId = await SeedGamePackageAsync(gameId, "Race Pkg", 100);
+            await UpdatePackageStockAsync(packageId, 5); // Chỉ có 5 item
+            
+            int concurrentRequests = 10;
+            var request = new { GamePackageId = packageId, Quantity = 1, GameAccountInfo = "race_player" };
+
+            // Tạo 10 User khác nhau để bypass rule "mỗi user chỉ có 1 đơn Pending"
+            var userIds = new List<long>();
+            for (int i = 1; i <= concurrentRequests; i++)
+            {
+                userIds.Add(await SeedUserAsync($"race_user_{i}", $"race_{i}@test.com"));
+            }
+
+            // Act
+            var tasks = new List<Task<HttpResponseMessage>>();
+            foreach (var userId in userIds)
+            {
+                var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/orders/place")
+                {
+                    Content = JsonContent.Create(request)
+                };
+                httpRequest.Headers.Add("X-Test-UserId", userId.ToString());
+                httpRequest.Headers.Add("X-Test-Role", "Customer");
+                
+                tasks.Add(_client.SendAsync(httpRequest));
+            }
+
+            var responses = await Task.WhenAll(tasks);
+
+            // Assert
+
+            var stockQuantity = await GetPackageStockAsync(packageId);
+            stockQuantity.Should().Be(0);
+
+            var successCount = responses.Count(r => r.StatusCode == HttpStatusCode.Created);
+            successCount.Should().Be(5);
+            
+            var failedCount = responses.Count(r => r.StatusCode == HttpStatusCode.BadRequest);
+            failedCount.Should().Be(5);
+        }
+
+        #endregion
     }
 }
+

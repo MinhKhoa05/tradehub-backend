@@ -122,11 +122,5 @@ namespace GameTopUp.Tests.IntegrationTests
             result!.Data!.Name.Should().Be(specialChars + longName);
         }
 
-        private class ApiResponseTestWrapper<T>
-        {
-            public bool Success { get; set; }
-            public T? Data { get; set; }
-            public string? Message { get; set; }
-        }
     }
 }

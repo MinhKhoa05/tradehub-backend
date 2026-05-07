@@ -127,11 +127,5 @@ namespace GameTopUp.Tests.IntegrationTests
             getResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
 
-        private class ApiResponseTestWrapper<T>
-        {
-            public bool Success { get; set; }
-            public T? Data { get; set; }
-            public string? Message { get; set; }
-        }
     }
 }

@@ -128,12 +128,5 @@ namespace GameTopUp.Tests.IntegrationTests
             userInDb!.IsActive.Should().BeFalse();
         }
 
-        // Helper class for deserializing ApiResponse in tests
-        private class ApiResponseTestWrapper<T>
-        {
-            public bool Success { get; set; }
-            public T? Data { get; set; }
-            public string? Message { get; set; }
-        }
     }
 }
