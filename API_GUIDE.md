@@ -56,11 +56,15 @@ The system uses **JWT (JSON Web Token)** for authentication.
 | | GET | `/api/wallet/transactions` | View wallet transaction history | Yes | User |
 | | POST | `/api/wallet/transactions/deposit` | Deposit money into wallet | Yes | User |
 | | POST | `/api/wallet/transactions/withdraw` | Withdraw money from wallet | Yes | User |
-| **Order** | POST | `/api/orders/checkout` | Create order from cart | Yes | User |
+| **Order** | POST | `/api/orders/place` | Place a new order (Stock reservation) | Yes | User |
+| | POST | `/api/orders/{id}/pay` | Pay for a pending order | Yes | User |
 | | GET | `/api/orders/me` | Get list of my orders | Yes | User |
-| | GET | `/api/orders/{orderId}` | View order details | Yes | User |
-| | GET | `/api/orders/{orderId}/history` | View order status history | Yes | User |
-| | POST | `/api/orders/{orderId}/pick` | Claim order for processing | Yes | Admin |
+| | GET | `/api/orders/{id}` | View order details | Yes | User |
+| | GET | `/api/orders/{id}/history` | View order status history | Yes | User |
+| | GET | `/api/orders` | List all orders (filter by status) | Yes | Admin |
+| | POST | `/api/orders/{id}/pick` | Claim order for processing | Yes | Admin |
+| | POST | `/api/orders/{id}/complete`| Mark order as completed | Yes | Admin |
+| | POST | `/api/orders/{id}/cancel` | Cancel order & auto refund | Yes | All |
 
 
 ## 4. Core Workflows
@@ -74,8 +78,16 @@ The system uses **JWT (JSON Web Token)** for authentication.
 
 ### Flow 2: Wallet Activation -> Deposit -> Check Balance
 1. **Activation:** Call `POST /api/wallet/active` (only needs to be called once after registration).
-2. **Deposit:** Call `POST /api/wallet/transactions/deposit`. Send the `Amount` (decimal) inside a `WalletTransactionRequest` object in the Request Body.
-3. **Check Balance:** Call `GET /api/wallet` to update the balance displayed on the UI.
+2. **Deposit:** Call `POST /api/wallet/transactions/deposit`. Send the `Amount` (decimal) in the request body. User scans the dynamic QR code (Admin provides) to transfer.
+3. **Admin Approval:** Admin verifies the bank transfer and approves the deposit (Logic handled via internal admin panel/API).
+4. **Check Balance:** Call `GET /api/wallet` to see the updated balance.
+
+### Flow 3: Place Order -> Payment -> Admin Fulfillment
+1. **Place Order:** Call `POST /api/orders/place`. This reserves the stock immediately.
+2. **Payment:** Call `POST /api/orders/{id}/pay`. This debits the wallet balance and marks the order as `Paid`.
+3. **Admin Picking:** Admin calls `POST /api/orders/{id}/pick` to assign the order to themselves.
+4. **Processing & Completion:** Admin processes the top-up and calls `POST /api/orders/{id}/complete` to finish.
+5. **Cancellation (Optional):** If needed, calling `POST /api/orders/{id}/cancel` will automatically restore stock and refund the wallet (if already paid).
 
 ## 5. Important Notes
 - **Request Body/DTO Details:** Please refer to the [Swagger UI](http://localhost:5089/swagger) for the exact structure of each request.
