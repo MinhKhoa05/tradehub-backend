@@ -17,7 +17,7 @@
 📖 **[Read the System Motivation & Goals](./MOTIVATION.md)**
 
 Key features:
-- **Order Orchestration**: Decoupled "Place Order" (Stock Reservation) and "Payment" flows.
+- **Order Orchestration**: Decoupled "Place Order" (Stock Reservation) and "Payment" flows. State-based order processing ensures safe retry handling and prevents duplicate execution in concurrent scenarios.
 - **Transaction Tracking**: Comprehensive audit trail for wallet transactions using `BalanceBefore` and `BalanceAfter`.
 - **Internal Wallet**: Secure internal wallet using pessimistic locking to ensure consistency under concurrent operations.
 - **Data Integrity**: Database-level constraints and locking mechanisms to enforce business rules such as "One Pending Order per User".
@@ -25,10 +25,11 @@ Key features:
 
 ## 🛠 Tech Stack
 
-- **Language/Framework**: ASP.NET Core 8 (C#)
-- **Database**: MySQL (Production), Sqlite (Integration Testing)
+- **Backend Framework**: ASP.NET Core 8 (C#)
+- **Architecture**: RESTful API, Layered Architecture
+- **Database**: MySQL (Production), SQLite (Integration Testing)
 - **Data Access**: Dapper, Dommel
-- **Mapping**: Mapster
+- **Object Mapping**: Mapster
 - **Security**: JWT Authentication, BCrypt
 - **Testing**: xUnit, Moq, FluentAssertions
 - **Infrastructure**: Docker, Docker Compose
@@ -75,6 +76,7 @@ The application follows a layered architecture:
 - **Flow**: `Place Order` (Stock Reservation) → `Payment` (Wallet Debit & Mark Paid).
 - **Rationale**: Immediate inventory reservation prevents overselling, while separate payment allows for flexible checkout experiences.
 - **Integrity**: Automatic inventory restoration and wallet refunds on order cancellation, handled via atomic UseCase transactions.
+- **Resilience**: State-based order processing ensures safe retry handling and prevents duplicate execution in concurrent scenarios.
 
 ### Audit Trail
 - **Wallet**: Every transaction records `BalanceBefore` and `BalanceAfter`.
