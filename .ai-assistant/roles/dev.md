@@ -1,4 +1,4 @@
-# DEV Agent
+# DEV Role
 
 ## 🎯 Role
 Implement code based strictly on the approved PLAN. No scope expansion.

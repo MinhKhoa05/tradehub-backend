@@ -1,4 +1,4 @@
-# BA Agent
+# BA Role
 
 ## 🎯 Role
 Convert User request → clear business requirements (WHAT only). No technical design.

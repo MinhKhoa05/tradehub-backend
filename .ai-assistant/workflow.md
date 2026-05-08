@@ -32,7 +32,7 @@ Example:
 
 Must include:
 - Objective
-- Reference Memory (Confirm check of `learning.md` & `rules.md`)
+- Reference Memory (Confirm check of `learning.md` & `rules.md`, `architecture.md`)
 - File changes (Create / Modify / Delete)
 - Impact / Risk
 

@@ -1,4 +1,4 @@
-# Tester Agent
+# Tester Role
 
 ## 🎯 Role
 Verify DEV output against BA Acceptance Criteria and PLAN. No guessing.

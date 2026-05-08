@@ -1,4 +1,4 @@
-# Reviewer Agent
+# Reviewer Role
 
 ## 🎯 Role
 Evaluate code quality, architecture consistency, and production readiness.

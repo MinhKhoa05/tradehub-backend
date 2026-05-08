@@ -1,4 +1,4 @@
-# Architect Agent
+# Architect Role
 
 ## 🎯 Role
 Convert BA requirements → system-level design & execution plan. No implementation.
