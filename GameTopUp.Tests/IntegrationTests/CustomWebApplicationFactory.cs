@@ -122,16 +122,6 @@ namespace GameTopUp.Tests.IntegrationTests
                     );
                     CREATE INDEX IF NOT EXISTS idx_accounts_user_sort ON game_accounts(user_id, is_default, created_at);
 
-                    CREATE TABLE IF NOT EXISTS cart_items (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
-                        game_package_id INTEGER NOT NULL,
-                        quantity INTEGER NOT NULL DEFAULT 1,
-                        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-                        FOREIGN KEY(game_package_id) REFERENCES game_packages(id) ON DELETE CASCADE
-                    );
-                    CREATE INDEX IF NOT EXISTS idx_cart_lookup ON cart_items(user_id, game_package_id);
-
                     CREATE TABLE IF NOT EXISTS wallet_transactions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER NOT NULL,
@@ -181,6 +171,19 @@ namespace GameTopUp.Tests.IntegrationTests
                     CREATE INDEX IF NOT EXISTS idx_history_order_sort ON order_history(order_id, created_at);
                 ");
             });
+        }
+
+        public async Task ResetDatabaseAsync()
+        {
+            if (_connection == null) return;
+
+            // Thứ tự xóa từ bảng con (nhiều FK) đến bảng cha
+            var tables = new[] { "order_history", "wallet_transactions", "game_accounts", "orders", "wallets", "users", "game_packages", "games" };
+            foreach (var table in tables)
+            {
+                await _connection.ExecuteAsync($"DELETE FROM {table};");
+                await _connection.ExecuteAsync($"DELETE FROM sqlite_sequence WHERE name='{table}';");
+            }
         }
 
         protected override void Dispose(bool disposing)

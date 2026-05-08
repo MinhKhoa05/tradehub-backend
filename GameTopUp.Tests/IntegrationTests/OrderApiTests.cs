@@ -9,7 +9,8 @@ using GameTopUp.API;
 
 namespace GameTopUp.Tests.IntegrationTests
 {
-    public class OrderApiTests : IClassFixture<CustomWebApplicationFactory<Program>>
+    [Collection("IntegrationTests")]
+    public class OrderApiTests : IAsyncLifetime
     {
         private readonly HttpClient _client;
         private readonly CustomWebApplicationFactory<Program> _factory;
@@ -18,6 +19,16 @@ namespace GameTopUp.Tests.IntegrationTests
         {
             _factory = factory;
             _client = _factory.CreateClient();
+        }
+
+        public async Task InitializeAsync()
+        {
+            await _factory.ResetDatabaseAsync();
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
 
         #region Seeding Helpers
@@ -300,7 +311,7 @@ namespace GameTopUp.Tests.IntegrationTests
                 Content = JsonContent.Create(request)
             };
             httpRequest.Headers.Add("X-Test-UserId", customerId.ToString());
-            httpRequest.Headers.Add("X-Test-Role", "Customer");
+            httpRequest.Headers.Add("X-Test-Role", "User");
 
             var response = await _client.SendAsync(httpRequest);
             
@@ -329,12 +340,19 @@ namespace GameTopUp.Tests.IntegrationTests
             var packageId = await SeedGamePackageAsync(gameId, "Low Stock Pkg", 100);
             await UpdatePackageStockAsync(packageId, 1); // Chỉ còn 1
             
+            var customerId = await SeedUserAsync("stock_customer", "stock@test.com");
             var request = new { GamePackageId = packageId, Quantity = 5, GameAccountInfo = "player_456" };
 
             // Act
             // USER_TASK: Gọi API đặt hàng với số lượng vượt quá tồn kho.
             // // TODO: USER IMPLEMENT
-            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/orders/place")
+            {
+                Content = JsonContent.Create(request)
+            };
+            httpRequest.Headers.Add("X-Test-UserId", customerId.ToString());
+            httpRequest.Headers.Add("X-Test-Role", "User");
+            var response = await _client.SendAsync(httpRequest);
 
             // Assert
             // USER_TASK: Verify status code là BadRequest (400).
@@ -354,12 +372,19 @@ namespace GameTopUp.Tests.IntegrationTests
             var packageId = await SeedGamePackageAsync(gameId, "Inactive Pkg", 100);
             await UpdatePackageStatusAsync(packageId, false);
             
+            var customerId = await SeedUserAsync("inactive_customer", "inactive@test.com");
             var request = new { GamePackageId = packageId, Quantity = 1, GameAccountInfo = "player_inactive" };
 
             // Act
             // USER_TASK: Gọi API đặt hàng với gói game đã bị disable.
             // // TODO: USER IMPLEMENT
-            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/orders/place")
+            {
+                Content = JsonContent.Create(request)
+            };
+            httpRequest.Headers.Add("X-Test-UserId", customerId.ToString());
+            httpRequest.Headers.Add("X-Test-Role", "User");
+            var response = await _client.SendAsync(httpRequest);
 
             // Assert
             // USER_TASK: Verify status code là BadRequest (400).
@@ -385,7 +410,13 @@ namespace GameTopUp.Tests.IntegrationTests
             // Act
             // USER_TASK: Gọi API đặt hàng lần thứ hai khi đơn trước chưa xử lý/thanh toán.
             // // TODO: USER IMPLEMENT
-            var response = await _client.PostAsJsonAsync("api/orders/place", request);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/orders/place")
+            {
+                Content = JsonContent.Create(request)
+            };
+            httpRequest.Headers.Add("X-Test-UserId", customerId.ToString());
+            httpRequest.Headers.Add("X-Test-Role", "User");
+            var response = await _client.SendAsync(httpRequest);
 
             // Assert
             // USER_TASK: Verify status code là BadRequest (400) do vi phạm rule "mỗi user chỉ có 1 đơn Pending".
@@ -420,7 +451,7 @@ namespace GameTopUp.Tests.IntegrationTests
                     Content = JsonContent.Create(request)
                 };
                 httpRequest.Headers.Add("X-Test-UserId", userId.ToString());
-                httpRequest.Headers.Add("X-Test-Role", "Customer");
+                httpRequest.Headers.Add("X-Test-Role", "User");
                 
                 tasks.Add(_client.SendAsync(httpRequest));
             }

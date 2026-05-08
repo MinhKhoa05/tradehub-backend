@@ -9,7 +9,8 @@ using GameTopUp.API;
 
 namespace GameTopUp.Tests.IntegrationTests
 {
-    public class GamePackageApiTests : IClassFixture<CustomWebApplicationFactory<Program>>
+    [Collection("IntegrationTests")]
+    public class GamePackageApiTests : IAsyncLifetime
     {
         private readonly HttpClient _client;
         private readonly CustomWebApplicationFactory<Program> _factory;
@@ -18,6 +19,16 @@ namespace GameTopUp.Tests.IntegrationTests
         {
             _factory = factory;
             _client = _factory.CreateClient();
+        }
+
+        public async Task InitializeAsync()
+        {
+            await _factory.ResetDatabaseAsync();
+        }
+
+        public Task DisposeAsync()
+        {
+            return Task.CompletedTask;
         }
 
         private async Task<long> CreateGameAsync(string name, bool isActive = true)
