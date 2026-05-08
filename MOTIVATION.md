@@ -74,10 +74,10 @@ Every financial and order-related action is fully traceable for reconciliation a
 
 ---
 
-## 🧩 Outcome
-
+🧩 Intended Outcome
 By transforming a chat-based intermediary workflow into a structured backend system:
+
 - Order processing becomes deterministic and trackable
-- Admin workload is reduced and centralized
-- Users gain transparency and trust in fulfillment status
-- Financial operations become safe, auditable, and consistent under concurrency
+- Admin workload is expected to be reduced through centralized order management
+- Users gain clearer visibility into fulfillment status and order progress
+- Financial operations are designed to be safe, auditable, and consistent under concurrent transactions
